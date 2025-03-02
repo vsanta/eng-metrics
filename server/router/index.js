@@ -231,6 +231,70 @@ router.get('/analytics/pr-lifecycle/:analysisKey', async (req, res) => {
     }
 });
 
+// PR Time to Merge by Month endpoint
+router.get('/analytics/pr-time-by-month/:analysisKey', async (req, res) => {
+    const { analysisKey } = req.params;
+    try {
+        console.log(`API: Getting PR time by month for analysis key: ${analysisKey}`);
+        const data = await service.getAverageTimeToMerge(analysisKey);
+        
+        // Convert any BigInt values to numbers
+        const cleanData = data.map(item => {
+            const cleanItem = {};
+            for (const key in item) {
+                if (typeof item[key] === 'bigint') {
+                    cleanItem[key] = Number(item[key]);
+                } else {
+                    cleanItem[key] = item[key];
+                }
+            }
+            return cleanItem;
+        });
+        
+        // Check if there are any BigInt values left before stringify
+        const stringified = JSON.stringify(cleanData, (key, value) => 
+            typeof value === 'bigint' ? value.toString() : value
+        );
+        
+        res.send(stringified);
+    } catch (error) {
+        console.error('Error fetching PR time by month:', error);
+        res.status(500).json({ error: error.toString() });
+    }
+});
+
+// PR Time to Merge by Contributor endpoint
+router.get('/analytics/pr-time-by-contributor/:analysisKey', async (req, res) => {
+    const { analysisKey } = req.params;
+    try {
+        console.log(`API: Getting PR time by contributor for analysis key: ${analysisKey}`);
+        const data = await service.getTimeToMergeByContributor(analysisKey);
+        
+        // Convert any BigInt values to numbers
+        const cleanData = data.map(item => {
+            const cleanItem = {};
+            for (const key in item) {
+                if (typeof item[key] === 'bigint') {
+                    cleanItem[key] = Number(item[key]);
+                } else {
+                    cleanItem[key] = item[key];
+                }
+            }
+            return cleanItem;
+        });
+        
+        // Check if there are any BigInt values left before stringify
+        const stringified = JSON.stringify(cleanData, (key, value) => 
+            typeof value === 'bigint' ? value.toString() : value
+        );
+        
+        res.send(stringified);
+    } catch (error) {
+        console.error('Error fetching PR time by contributor:', error);
+        res.status(500).json({ error: error.toString() });
+    }
+});
+
 // Hot files (most frequently changed files)
 router.get('/analytics/hot-files/:analysisKey', async (req, res) => {
     const { analysisKey } = req.params;
@@ -305,6 +369,25 @@ router.get('/contributor/:author', async (req, res) => {
         const details = await service.getContributorDetails(author, analysisKey);
         const influenceRank = await service.getInfluenceRank(author, analysisKey);
         details['influenceRank'] = Number(influenceRank);
+        
+        // Get PR metrics for this contributor
+        try {
+            console.log(`Getting PR metrics for contributor: ${author}`);
+            const prMetrics = await service.getTimeToMergeByContributor(analysisKey);
+            const authorMetrics = prMetrics.find(m => m.author === author);
+            if (authorMetrics) {
+                details['prMetrics'] = {
+                    avgHours: authorMetrics.avg_hours,
+                    prCount: authorMetrics.pr_count,
+                    teamAvgHours: authorMetrics.team_avg_hours,
+                    difference: authorMetrics.difference
+                };
+            }
+        } catch (error) {
+            console.error(`Error getting PR metrics for ${author}:`, error);
+            // Continue without PR metrics
+        }
+        
         res.json(details);
     } catch (error) {
         console.error('Error fetching contributor details:', error);

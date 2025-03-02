@@ -527,51 +527,77 @@ async function getFileExtensions(analysisKey) {
 // Analyze branch information (PRs, branch lifecycle)
 async function analyzeBranches(repoPath, repoName, sinceDate, analysisKey) {
     try {
-        // Get all branches including merged ones
-        const branchesOutput = await runCommand(`git branch -a --format="%(refname) %(committerdate:iso) %(authorname)"`, repoPath);
-        const branches = branchesOutput.split('\n').filter(Boolean);
+        console.log(`Analyzing branches for ${repoName}...`);
         
-        for (const branchLine of branches) {
-            const parts = branchLine.split(' ');
-            if (parts.length < 4) continue;
+        // Detect the main branch (main or master)
+        let mainBranch = "main";
+        const checkMaster = await runCommand(`git rev-parse --verify master 2>/dev/null || echo "not found"`, repoPath);
+        if (checkMaster.trim() !== "not found") {
+            mainBranch = "master";
+        }
+        console.log(`Detected main branch: ${mainBranch}`);
+        
+        // Find all merge commits to the main branch
+        const sinceOption = sinceDate ? `--since='${sinceDate}'` : '';
+        const mergeCommits = await runCommand(
+            `git log ${sinceOption} --merges --first-parent ${mainBranch} --pretty=format:"%H|%P|%an|%aI|%s"`, 
+            repoPath
+        );
+        
+        if (!mergeCommits.trim()) {
+            console.log(`No merge commits found in ${repoName}`);
+            return;
+        }
+        
+        const merges = mergeCommits.split('\n').filter(Boolean);
+        console.log(`Found ${merges.length} merge commits in ${repoName}`);
+        
+        for (const merge of merges) {
+            // Parse merge commit data
+            const [mergeHash, parents, merger, mergeDate, message] = merge.split('|');
             
-            const branchFullName = parts[0];
-            // Skip remote branches and main/master branches
-            if (branchFullName.includes('refs/remotes/') || 
-                branchFullName.includes('/main') || 
-                branchFullName.includes('/master')) {
-                continue;
-            }
+            // Extract branch name from merge message
+            // Usually in format "Merge branch 'feature/x' into main" or "Merge pull request #X from branch"
+            const branchNameMatch = message.match(/branch ['"]([^'"]+)['"]/i) || 
+                                    message.match(/from ([^/\s]+\/[^\s]+)/i) ||
+                                    message.match(/pull request #\d+ from ([^\s]+)/i);
             
-            const branchName = branchFullName.replace('refs/heads/', '');
-            const createdDate = new Date(parts.slice(1, parts.length - 1).join(' '));
-            const creator = parts[parts.length - 1];
+            let branchName = branchNameMatch ? branchNameMatch[1] : `unknown-${mergeHash.substring(0, 7)}`;
             
-            // Check if the branch was merged
-            const mergeInfo = await runCommand(`git branch --merged master | grep ${branchName}`, repoPath);
-            let mergedDate = null;
-            let mergedBy = null;
+            // Get the commit hash of the branch head (second parent in the merge commit)
+            const parentHashes = parents.split(' ');
+            if (parentHashes.length < 2) continue; // Not a real merge
             
-            if (mergeInfo.trim()) {
-                // The branch was merged, get merge commit info
-                const mergeCommitInfo = await runCommand(
-                    `git log -1 --format="%aI,%an" --merges --grep="Merge.*${branchName}"`, 
-                    repoPath
-                );
-                
-                if (mergeCommitInfo.trim()) {
-                    const [mergeDateTime, merger] = mergeCommitInfo.split(',');
-                    mergedDate = new Date(mergeDateTime);
-                    mergedBy = merger;
-                }
-            }
+            const branchHead = parentHashes[1];
+            
+            // Find the first commit of the branch
+            // This is an approximation - we find the first commit reachable from branch head
+            // but not from the main branch parent
+            const branchFirstCommit = await runCommand(
+                `git rev-list ${branchHead} --not ${parentHashes[0]} --topo-order --reverse | head -1`, 
+                repoPath
+            );
+            
+            if (!branchFirstCommit.trim()) continue;
+            
+            // Get info about the first commit
+            const firstCommitInfo = await runCommand(
+                `git show --no-patch --format="%an|%aI" ${branchFirstCommit.trim()}`,
+                repoPath
+            );
+            
+            if (!firstCommitInfo.trim()) continue;
+            
+            const [creator, creationDate] = firstCommitInfo.trim().split('|');
+            
+            console.log(`Found PR: ${branchName} created by ${creator} on ${creationDate}, merged by ${merger} on ${mergeDate}`);
             
             // Store branch information
             await db.runQuery(
                 `INSERT INTO branches (name, created_timestamp, merged_timestamp, created_by, merged_by, repository, analysis_key)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [branchName, createdDate.toISOString(), mergedDate ? mergedDate.toISOString() : null, 
-                 creator, mergedBy, repoName, analysisKey]
+                [branchName, new Date(creationDate).toISOString(), new Date(mergeDate).toISOString(), 
+                 creator, merger, repoName, analysisKey]
             );
         }
     } catch (error) {
@@ -640,6 +666,7 @@ function classifyCommitType(message) {
 
 // Get PR lifecycle metrics
 async function getPRLifecycle(analysisKey) {
+    console.log(`Getting PR lifecycle data for analysis key: ${analysisKey}`);
     const query = `
     SELECT 
         name as branch_name,
@@ -655,6 +682,75 @@ async function getPRLifecycle(analysisKey) {
     `;
     
     return await db.getQuery(query, [analysisKey]);
+}
+
+// Get average time to merge PRs
+async function getAverageTimeToMerge(analysisKey) {
+    console.log(`Getting average time to merge for analysis key: ${analysisKey}`);
+    const query = `
+    WITH monthly_stats AS (
+        SELECT 
+            strftime('%Y-%m', merged_timestamp) as month,
+            AVG(JULIAN(merged_timestamp) - JULIAN(created_timestamp)) * 24 as avg_hours,
+            COUNT(*) as pr_count
+        FROM branches
+        WHERE analysis_key = ?
+          AND merged_timestamp IS NOT NULL
+        GROUP BY strftime('%Y-%m', merged_timestamp)
+        ORDER BY month
+    )
+    SELECT
+        month,
+        CAST(avg_hours AS FLOAT) as avg_hours,
+        CAST(pr_count AS INTEGER) as pr_count
+    FROM monthly_stats
+    `;
+    
+    try {
+        return await db.getQuery(query, [analysisKey]);
+    } catch (error) {
+        console.error("Error getting average time to merge:", error);
+        return [];
+    }
+}
+
+// Get per-contributor time to merge stats
+async function getTimeToMergeByContributor(analysisKey) {
+    console.log(`Getting time to merge by contributor for analysis key: ${analysisKey}`);
+    const query = `
+    WITH contributor_stats AS (
+        SELECT 
+            created_by as author,
+            AVG(JULIAN(merged_timestamp) - JULIAN(created_timestamp)) * 24 as avg_hours,
+            COUNT(*) as pr_count
+        FROM branches
+        WHERE analysis_key = ?
+          AND merged_timestamp IS NOT NULL
+        GROUP BY created_by
+    ),
+    team_avg AS (
+        SELECT AVG(JULIAN(merged_timestamp) - JULIAN(created_timestamp)) * 24 as team_avg_hours
+        FROM branches
+        WHERE analysis_key = ?
+          AND merged_timestamp IS NOT NULL
+    )
+    SELECT
+        cs.author,
+        CAST(cs.avg_hours AS FLOAT) as avg_hours,
+        CAST(cs.pr_count AS INTEGER) as pr_count,
+        CAST(ta.team_avg_hours AS FLOAT) as team_avg_hours,
+        CAST((cs.avg_hours - ta.team_avg_hours) AS FLOAT) as difference
+    FROM contributor_stats cs, team_avg ta
+    WHERE cs.pr_count >= 2
+    ORDER BY cs.avg_hours
+    `;
+    
+    try {
+        return await db.getQuery(query, [analysisKey, analysisKey]);
+    } catch (error) {
+        console.error("Error getting time to merge by contributor:", error);
+        return [];
+    }
 }
 
 // Get hot files (most frequently changed)
@@ -705,6 +801,8 @@ module.exports = {
     getFileChangesByType,
     getFileExtensions,
     getPRLifecycle,
+    getAverageTimeToMerge,
+    getTimeToMergeByContributor,
     getHotFiles,
     getCommitTypesByAuthor,
 };

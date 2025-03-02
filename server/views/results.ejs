@@ -191,6 +191,11 @@
     </div>
     
     <div class="raw-data-section">
+        <h3>PR Merge Time by Month</h3>
+        <div id="prTimeByMonth"></div>
+    </div>
+    
+    <div class="raw-data-section">
         <h3>Hot Files (Most Changed)</h3>
         <div id="hotFiles"></div>
     </div>
@@ -247,6 +252,167 @@
     <span id="closePanel">&times;</span>
     <div id="panelContent"></div>
 </div>
+
+<script>
+    // Function to render PR Time by Month chart
+    function renderPRTimeByMonth(prTimeData) {
+        const container = document.getElementById('prTimeByMonth');
+        
+        if (!prTimeData || !prTimeData.length) {
+            container.innerHTML = "<p>No PR time by month data available.</p>";
+            return;
+        }
+        
+        // Create a bar chart for PR time by month
+        const margin = {top: 30, right: 30, bottom: 70, left: 60};
+        const width = 700 - margin.left - margin.right;
+        const height = 400 - margin.top - margin.bottom;
+        
+        // Create SVG
+        const svg = d3.select(container)
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`);
+        
+        // X axis: month
+        const x = d3.scaleBand()
+            .range([0, width])
+            .domain(prTimeData.map(d => d.month))
+            .padding(0.2);
+        
+        svg.append("g")
+            .attr("transform", `translate(0, ${height})`)
+            .call(d3.axisBottom(x))
+            .selectAll("text")
+            .attr("transform", "translate(-10,0)rotate(-45)")
+            .style("text-anchor", "end");
+        
+        // Y axis: average hours
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(prTimeData, d => d.avg_hours) * 1.1])
+            .range([height, 0]);
+        
+        svg.append("g")
+            .call(d3.axisLeft(y));
+        
+        // Color scale based on PR count
+        const color = d3.scaleLinear()
+            .domain([1, d3.max(prTimeData, d => d.pr_count)])
+            .range(["#69b3a2", "#3498db"]);
+        
+        // Add a tooltip
+        const tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0)
+            .style("position", "absolute")
+            .style("background-color", "white")
+            .style("border", "1px solid #ddd")
+            .style("padding", "10px")
+            .style("border-radius", "4px")
+            .style("pointer-events", "none");
+        
+        // Add bars
+        svg.selectAll("bars")
+            .data(prTimeData)
+            .enter()
+            .append("rect")
+            .attr("x", d => x(d.month))
+            .attr("y", d => y(d.avg_hours))
+            .attr("width", x.bandwidth())
+            .attr("height", d => height - y(d.avg_hours))
+            .attr("fill", d => color(d.pr_count))
+            .on("mouseover", function(event, d) {
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                tooltip.html(`
+                    <strong>${d.month}</strong><br/>
+                    Average Time: ${d.avg_hours.toFixed(1)} hours<br/>
+                    Number of PRs: ${d.pr_count}
+                `)
+                    .style("left", (event.pageX) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            })
+            .on("mouseout", function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
+        
+        // Add title
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", -10)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .text("Average PR Merge Time by Month");
+        
+        // Add PR count line on secondary axis
+        const y2 = d3.scaleLinear()
+            .domain([0, d3.max(prTimeData, d => d.pr_count) * 1.1])
+            .range([height, 0]);
+        
+        svg.append("g")
+            .attr("transform", `translate(${width}, 0)`)
+            .call(d3.axisRight(y2));
+        
+        // Add the line for PR count
+        svg.append("path")
+            .datum(prTimeData)
+            .attr("fill", "none")
+            .attr("stroke", "#e74c3c")
+            .attr("stroke-width", 2)
+            .attr("d", d3.line()
+                .x(d => x(d.month) + x.bandwidth()/2)
+                .y(d => y2(d.pr_count))
+            );
+        
+        // Add dots for PR count
+        svg.selectAll("dots")
+            .data(prTimeData)
+            .enter()
+            .append("circle")
+            .attr("cx", d => x(d.month) + x.bandwidth()/2)
+            .attr("cy", d => y2(d.pr_count))
+            .attr("r", 5)
+            .attr("fill", "#e74c3c");
+        
+        // Add legend
+        const legend = svg.append("g")
+            .attr("transform", `translate(${width - 120}, 0)`);
+        
+        legend.append("circle")
+            .attr("cx", 0)
+            .attr("cy", 10)
+            .attr("r", 5)
+            .attr("fill", "#e74c3c");
+        
+        legend.append("text")
+            .attr("x", 10)
+            .attr("y", 10)
+            .attr("dy", ".35em")
+            .style("font-size", "12px")
+            .text("PR Count");
+        
+        legend.append("rect")
+            .attr("x", 0)
+            .attr("y", 30)
+            .attr("width", 10)
+            .attr("height", 10)
+            .attr("fill", "#69b3a2");
+        
+        legend.append("text")
+            .attr("x", 15)
+            .attr("y", 35)
+            .attr("dy", ".35em")
+            .style("font-size", "12px")
+            .text("Avg Hours");
+    }
+
+</script>
 
 <script>
     // Data injected from the server
@@ -349,6 +515,25 @@
     function showSidePanel(details) {
         const panel = document.getElementById('sidePanel');
         const panelContent = document.getElementById('panelContent');
+        
+        // PR metrics HTML section
+        let prMetricsHTML = '<p>No PR metrics available for this contributor.</p>';
+        if (details.prMetrics) {
+            const metrics = details.prMetrics;
+            const differenceColor = metrics.difference < 0 ? '#4CAF50' : '#f44336'; // Green if faster than team average, red if slower
+            
+            prMetricsHTML = `
+                <p><strong>Average PR Merge Time:</strong> ${metrics.avgHours.toFixed(1)} hours</p>
+                <p><strong>Number of PRs:</strong> ${metrics.prCount}</p>
+                <p><strong>Team Average PR Merge Time:</strong> ${metrics.teamAvgHours.toFixed(1)} hours</p>
+                <p style="color: ${differenceColor}">
+                    <strong>Difference from team average:</strong> 
+                    ${metrics.difference > 0 ? '+' : ''}${metrics.difference.toFixed(1)} hours
+                    (${metrics.difference > 0 ? 'slower than' : 'faster than'} team average)
+                </p>
+            `;
+        }
+        
         panelContent.innerHTML = `
         <h2>${details.influenceRank} ${details.author}</h2>
         <p><strong>Creates:</strong> ${details.creates}</p>
@@ -361,6 +546,10 @@
             Multiplier = (Edits on created files > 0 ? Edits on created files : 1)
           </em>
         </p>
+        
+        <h3>PR Metrics</h3>
+        ${prMetricsHTML}
+        
         <h3>Contributions per Repository</h3>
         ${details.perRepo && details.perRepo.length > 0 ? `
           <ul>
@@ -512,15 +701,17 @@
             fetch(`/api/analytics/file-extensions/${analysisKey}`).then(res => res.json()),
             fetch(`/api/analytics/commits-by-day/${analysisKey}`).then(res => res.json()),
             fetch(`/api/analytics/pr-lifecycle/${analysisKey}`).then(res => res.json()),
+            fetch(`/api/analytics/pr-time-by-month/${analysisKey}`).then(res => res.json()),
             fetch(`/api/analytics/hot-files/${analysisKey}`).then(res => res.json()),
             fetch(`/api/analytics/commit-types/${analysisKey}`).then(res => res.json())
         ])
-        .then(([commits, changeTypes, fileExtensions, commitsByDay, prLifecycle, hotFiles, commitTypes]) => {
+        .then(([commits, changeTypes, fileExtensions, commitsByDay, prLifecycle, prTimeByMonth, hotFiles, commitTypes]) => {
             renderCommitsTable(commits.slice(0, 50)); // Show first 50 commits
             renderFileChangeTypes(changeTypes);
             renderFileExtensions(fileExtensions);
             renderCommitActivity(commitsByDay);
             renderPRLifecycle(prLifecycle);
+            renderPRTimeByMonth(prTimeByMonth);
             renderHotFiles(hotFiles);
             renderCommitTypes(commitTypes);
             

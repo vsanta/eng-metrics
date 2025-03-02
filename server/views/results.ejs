@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Analysis Results</title>
+    <!-- Include D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        #tooltip {
+            position: absolute;
+            display: none;
+            padding: 8px;
+            background-color: lightgray;
+            border: 1px solid #333;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+<h1>Analysis Complete</h1>
+<p>Total Creates: <%= result.totalCreates %></p>
+<p>Total Edits: <%= result.totalEdits %></p>
+<p>Since Date: <%= result.sinceDate %></p>
+
+<!-- Container for the scatter plot -->
+<div id="scatterPlot"></div>
+<div id="tooltip"></div>
+
+<script>
+    // Parse the contributor data passed from the server.
+    // The service is expected to return an array of contributor objects.
+    const dataPoints = <%- JSON.stringify(result.contributors || []) %>;
+
+    // Define dimensions and margins
+    const width = 600, height = 400;
+    const margin = { top: 50, right: 50, bottom: 50, left: 50 };
+
+    // Create the SVG element
+    const svg = d3.select("#scatterPlot")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    // Create scales (flip axes so x-axis represents file creations)
+    const xScale = d3.scaleLinear()
+        .domain([0, d3.max(dataPoints, d => d.creates) + 5])
+        .range([margin.left, width - margin.right]);
+
+    const yScale = d3.scaleLinear()
+        .domain([0, d3.max(dataPoints, d => d.edits) + 5])
+        .range([height - margin.bottom, margin.top]);
+
+    // Add x-axis (file creations)
+    const xAxis = d3.axisBottom(xScale);
+    svg.append("g")
+        .attr("transform", `translate(0, ${height - margin.bottom})`)
+        .call(xAxis)
+        .append("text")
+        .attr("x", width - margin.right)
+        .attr("y", -10)
+        .attr("fill", "#000")
+        .style("text-anchor", "end")
+        .text("File Creations");
+
+    // Add y-axis (file edits)
+    const yAxis = d3.axisLeft(yScale);
+    svg.append("g")
+        .attr("transform", `translate(${margin.left}, 0)`)
+        .call(yAxis)
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -margin.top)
+        .attr("y", 15)
+        .attr("fill", "#000")
+        .style("text-anchor", "end")
+        .text("File Edits");
+
+    // Tooltip selection
+    const tooltip = d3.select("#tooltip");
+
+    // Plot data points
+    svg.selectAll("circle")
+        .data(dataPoints)
+        .enter()
+        .append("circle")
+        .attr("cx", d => xScale(d.creates))
+        .attr("cy", d => yScale(d.edits))
+        .attr("r", 8)
+        .attr("fill", "steelblue")
+        .on("mouseover", function(event, d) {
+            tooltip.style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 10) + "px")
+                .style("display", "inline-block")
+                .html(`<strong>${d.author}</strong><br/>Creates: ${d.creates}<br/>Edits: ${d.edits}`);
+        })
+        .on("mouseout", () => {
+            tooltip.style("display", "none");
+        });
+</script>
+</body>
+</html>

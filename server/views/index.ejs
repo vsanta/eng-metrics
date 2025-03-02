@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Git Influence Analyzer</title>
+</head>
+<body>
+<h1>Git Influence Analyzer</h1>
+<form action="/api/analyze" method="POST">
+    <label for="localPath">Local Path to Scan:</label>
+    <input type="text" id="localPath" name="localPath" required>
+    <br>
+    <label for="years">Number of Years:</label>
+    <input type="number" id="years" name="years" value="10" min="1" step="any">
+    <br>
+    <button type="submit">Analyze</button>
+</form>
+</body>
+</html>

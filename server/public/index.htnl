@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Git Influence Analyzer</title>
+</head>
+<body>
+  <div id="root"></div>
+  <!-- Include your bundled React script (e.g., bundle.js) -->
+  <script src="bundle.js"></script>
+</body>
+</html>

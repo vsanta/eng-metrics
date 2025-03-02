@@ -10,7 +10,18 @@ router.get('/network/:analysisKey', async (req, res) => {
     const { analysisKey } = req.params;
     try {
         const networkData = await service.getCollaborationNetwork(analysisKey);
-        res.json(networkData);
+        
+        // Convert any BigInt values to numbers
+        const cleanNetworkData = networkData.map(item => {
+            const cleanItem = {};
+            for (const key in item) {
+                cleanItem[key] = typeof item[key] === 'bigint' ? 
+                    Number(item[key]) : item[key];
+            }
+            return cleanItem;
+        });
+        
+        res.json(cleanNetworkData);
     } catch (error) {
         console.error('Error fetching collaboration network:', error);
         res.status(500).json({ error: error.toString() });
@@ -22,12 +33,34 @@ router.get('/commits/:analysisKey', async (req, res) => {
     const { analysisKey } = req.params;
     try {
         const query = `
-            SELECT * FROM commits
+            SELECT 
+                CAST(id AS INTEGER) as id,
+                hash,
+                author,
+                timestamp,
+                message,
+                repository,
+                analysis_key
+            FROM commits
             WHERE analysis_key = ?
             ORDER BY timestamp DESC
         `;
         const commits = await db.getQuery(query, [analysisKey]);
-        res.json(commits);
+        
+        // Convert any potential BigInt values to regular numbers
+        const cleanCommits = commits.map(commit => {
+            const cleanCommit = {};
+            for (const key in commit) {
+                if (typeof commit[key] === 'bigint') {
+                    cleanCommit[key] = Number(commit[key]);
+                } else {
+                    cleanCommit[key] = commit[key];
+                }
+            }
+            return cleanCommit;
+        });
+        
+        res.json(cleanCommits);
     } catch (error) {
         console.error('Error fetching commits:', error);
         res.status(500).json({ error: error.toString() });
@@ -39,11 +72,37 @@ router.get('/file-changes/:commitHash', async (req, res) => {
     const { commitHash } = req.params;
     try {
         const query = `
-            SELECT * FROM file_changes
+            SELECT 
+                CAST(id AS INTEGER) as id,
+                commit_hash,
+                status,
+                filename,
+                repository,
+                analysis_key
+            FROM file_changes
             WHERE commit_hash = ?
         `;
         const fileChanges = await db.getQuery(query, [commitHash]);
-        res.json(fileChanges);
+        
+        // Convert any potential BigInt values to regular numbers
+        const cleanFileChanges = fileChanges.map(change => {
+            const cleanChange = {};
+            for (const key in change) {
+                if (typeof change[key] === 'bigint') {
+                    cleanChange[key] = Number(change[key]);
+                } else {
+                    cleanChange[key] = change[key];
+                }
+            }
+            return cleanChange;
+        });
+        
+        // Check if there are any BigInt values left before stringify
+        const stringified = JSON.stringify(cleanFileChanges, (key, value) => 
+            typeof value === 'bigint' ? value.toString() : value
+        );
+        
+        res.send(stringified);
     } catch (error) {
         console.error('Error fetching file changes:', error);
         res.status(500).json({ error: error.toString() });
@@ -55,7 +114,26 @@ router.get('/analytics/commits-by-day/:analysisKey', async (req, res) => {
     const { analysisKey } = req.params;
     try {
         const data = await service.getCommitsByDay(analysisKey);
-        res.json(data);
+        
+        // Convert any BigInt values to numbers
+        const cleanData = data.map(item => {
+            const cleanItem = {};
+            for (const key in item) {
+                if (typeof item[key] === 'bigint') {
+                    cleanItem[key] = Number(item[key]);
+                } else {
+                    cleanItem[key] = item[key];
+                }
+            }
+            return cleanItem;
+        });
+        
+        // Check if there are any BigInt values left in cleanData before stringify
+        const stringified = JSON.stringify(cleanData, (key, value) => 
+            typeof value === 'bigint' ? value.toString() : value
+        );
+        
+        res.send(stringified);
     } catch (error) {
         console.error('Error fetching commit analytics:', error);
         res.status(500).json({ error: error.toString() });
@@ -66,7 +144,26 @@ router.get('/analytics/changes-by-type/:analysisKey', async (req, res) => {
     const { analysisKey } = req.params;
     try {
         const data = await service.getFileChangesByType(analysisKey);
-        res.json(data);
+        
+        // Convert any BigInt values to numbers
+        const cleanData = data.map(item => {
+            const cleanItem = {};
+            for (const key in item) {
+                if (typeof item[key] === 'bigint') {
+                    cleanItem[key] = Number(item[key]);
+                } else {
+                    cleanItem[key] = item[key];
+                }
+            }
+            return cleanItem;
+        });
+        
+        // Check if there are any BigInt values left in cleanData before stringify
+        const stringified = JSON.stringify(cleanData, (key, value) => 
+            typeof value === 'bigint' ? value.toString() : value
+        );
+        
+        res.send(stringified);
     } catch (error) {
         console.error('Error fetching file change analytics:', error);
         res.status(500).json({ error: error.toString() });
@@ -77,7 +174,26 @@ router.get('/analytics/file-extensions/:analysisKey', async (req, res) => {
     const { analysisKey } = req.params;
     try {
         const data = await service.getFileExtensions(analysisKey);
-        res.json(data);
+        
+        // Convert any BigInt values to numbers
+        const cleanData = data.map(item => {
+            const cleanItem = {};
+            for (const key in item) {
+                if (typeof item[key] === 'bigint') {
+                    cleanItem[key] = Number(item[key]);
+                } else {
+                    cleanItem[key] = item[key];
+                }
+            }
+            return cleanItem;
+        });
+        
+        // Check if there are any BigInt values left in cleanData before stringify
+        const stringified = JSON.stringify(cleanData, (key, value) => 
+            typeof value === 'bigint' ? value.toString() : value
+        );
+        
+        res.send(stringified);
     } catch (error) {
         console.error('Error fetching file extension analytics:', error);
         res.status(500).json({ error: error.toString() });

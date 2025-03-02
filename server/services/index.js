@@ -424,7 +424,7 @@ async function getCollaborationNetwork(analysisKey) {
     SELECT 
         creator, 
         editor,
-        COUNT(*) AS collaboration_count
+        CAST(COUNT(*) AS INTEGER) AS collaboration_count
     FROM edits_to_creations
     WHERE analysis_key = ?
     GROUP BY creator, editor
@@ -439,14 +439,14 @@ async function getCommitsByDay(analysisKey) {
     const query = `
     SELECT 
         author,
-        DATE(timestamp) as date,
-        COUNT(*) as commit_count
+        strftime('%Y-%m-%d', timestamp) as date,
+        CAST(COUNT(*) AS INTEGER) as commit_count
     FROM commits
     WHERE analysis_key = ?
-    GROUP BY author, DATE(timestamp)
+    GROUP BY author, strftime('%Y-%m-%d', timestamp)
     ORDER BY date
     `;
-    
+
     return await db.getQuery(query, [analysisKey]);
 }
 
@@ -455,12 +455,12 @@ async function getFileChangesByType(analysisKey) {
     const query = `
     SELECT 
         status,
-        COUNT(*) as change_count
+        CAST(COUNT(*) AS INTEGER) as change_count
     FROM file_changes
     WHERE analysis_key = ?
     GROUP BY status
     `;
-    
+
     return await db.getQuery(query, [analysisKey]);
 }
 
@@ -471,7 +471,7 @@ async function getFileExtensions(analysisKey) {
         SELECT 
             CASE 
                 WHEN filename LIKE '%.%' THEN 
-                    SUBSTR(filename, INSTR(filename, '.', -1) + 1) 
+                    SUBSTR(filename, LENGTH(filename) - POSITION('.' IN REVERSE(filename)) + 2) 
                 ELSE 'no-extension'
             END as extension
         FROM file_changes
@@ -479,12 +479,12 @@ async function getFileExtensions(analysisKey) {
     )
     SELECT 
         extension,
-        COUNT(*) as count
+        CAST(COUNT(*) AS INTEGER) as count
     FROM extensions
     GROUP BY extension
     ORDER BY count DESC
     `;
-    
+
     return await db.getQuery(query, [analysisKey]);
 }
 

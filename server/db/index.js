@@ -11,6 +11,19 @@ function initDB(dbFile = ':memory:') {
 function createTables() {
     // Use the global connection to run table creation statements.
     connection.run(`
+    CREATE SEQUENCE IF NOT EXISTS analysis_id_seq;
+    CREATE TABLE IF NOT EXISTS analyses (
+      id BIGINT DEFAULT nextval('analysis_id_seq') PRIMARY KEY,
+      analysis_key TEXT UNIQUE,
+      label TEXT,
+      local_path TEXT,
+      years FLOAT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      since_date DATE
+    );
+  `, (err) => { if (err) console.error(err); });
+    
+    connection.run(`
     CREATE SEQUENCE IF NOT EXISTS repo_id_seq;
     CREATE TABLE IF NOT EXISTS repositories (
       id BIGINT DEFAULT nextval('repo_id_seq') PRIMARY KEY,

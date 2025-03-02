@@ -84,12 +84,24 @@ async function getContributorDetails(author, analysisKey) {
     };
 }
 
-async function analyzeAllRepositories(localPath, years) {
+async function analyzeAllRepositories(localPath, years, label) {
     const analysisKey = generateAnalysisKey(localPath, years);
     const sinceDate = new Date(Date.now() - years * 365 * 24 * 3600 * 1000)
         .toISOString()
         .slice(0, 10);
-    console.log(`Analyzing repositories in ${localPath} since ${sinceDate} with key: ${analysisKey}`);
+    console.log(`Analyzing repositories in ${localPath} since ${sinceDate} with key: ${analysisKey}, label: ${label}`);
+
+    // Store analysis metadata
+    try {
+        await db.runQuery(
+            `INSERT INTO analyses (analysis_key, label, local_path, years, since_date) 
+             VALUES (?, ?, ?, ?, ?)`,
+            [analysisKey, label, localPath, years, sinceDate]
+        );
+    } catch (error) {
+        console.error('Error storing analysis metadata:', error);
+        // Continue anyway - this shouldn't block the analysis
+    }
 
     const repos = findRepositories(localPath);
     let totalCreates = 0, totalEdits = 0;
@@ -98,7 +110,7 @@ async function analyzeAllRepositories(localPath, years) {
         totalCreates += Number(creates);
         totalEdits += Number(edits);
     }
-    return { totalCreates, totalEdits, sinceDate, analysisKey };
+    return { totalCreates, totalEdits, sinceDate, analysisKey, label };
 }
 
 
@@ -786,6 +798,53 @@ async function getCommitTypesByAuthor(analysisKey) {
     return await db.getQuery(query, [analysisKey]);
 }
 
+// Get list of previous analyses
+async function getPreviousAnalyses() {
+    console.log("Getting previous analyses list");
+    const query = `
+    SELECT 
+        analysis_key,
+        label,
+        local_path,
+        years,
+        created_at,
+        since_date
+    FROM analyses
+    ORDER BY created_at DESC
+    `;
+    
+    try {
+        return await db.getQuery(query);
+    } catch (error) {
+        console.error("Error getting previous analyses:", error);
+        return [];
+    }
+}
+
+// Get analysis by key
+async function getAnalysisByKey(analysisKey) {
+    console.log(`Getting analysis details for key: ${analysisKey}`);
+    const query = `
+    SELECT 
+        analysis_key,
+        label,
+        local_path,
+        years,
+        created_at,
+        since_date
+    FROM analyses
+    WHERE analysis_key = ?
+    `;
+    
+    try {
+        const results = await db.getQuery(query, [analysisKey]);
+        return results.length > 0 ? results[0] : null;
+    } catch (error) {
+        console.error(`Error getting analysis details for ${analysisKey}:`, error);
+        return null;
+    }
+}
+
 module.exports = {
     analyzeAllRepositories,
     getContributorDetails,
@@ -805,4 +864,6 @@ module.exports = {
     getTimeToMergeByContributor,
     getHotFiles,
     getCommitTypesByAuthor,
+    getPreviousAnalyses,
+    getAnalysisByKey,
 };

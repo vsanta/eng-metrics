@@ -2,51 +2,128 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Analysis Results</title>
+    <title>Engineering Metrics</title>
     <!-- Include D3.js -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        /* Basic styling for the scatter plot and tooltip */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .header-details {
+            flex: 1;
+        }
+        .header-actions {
+            text-align: right;
+        }
+        .back-link {
+            display: inline-block;
+            background-color: #2196F3;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-left: 10px;
+        }
+        .back-link:hover {
+            background-color: #0b7dda;
+        }
+        h1, h2, h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .card {
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            grid-gap: 20px;
+            margin-bottom: 20px;
+        }
+        .metrics-full {
+            grid-column: 1 / -1;
+        }
+        
+        /* Tooltip styling */
         #tooltip {
             position: absolute;
             display: none;
-            padding: 8px;
-            background-color: lightgray;
-            border: 1px solid #333;
+            padding: 10px;
+            background-color: white;
+            border: 1px solid #ddd;
             border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            pointer-events: none;
+            z-index: 100;
         }
         /* Side panel styling */
         #sidePanel {
             position: fixed;
             top: 0;
             right: -400px;
-            width: 350px;
+            width: 380px;
             height: 100%;
-            background: #f7f7f7;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+            background: white;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.2);
             padding: 20px;
             overflow-y: auto;
             transition: right 0.3s ease;
+            z-index: 1000;
         }
         #sidePanel.open {
             right: 0;
         }
         #sidePanel h2 {
             margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
         }
         #closePanel {
             cursor: pointer;
             float: right;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
+            color: #888;
         }
-        /* Network graph styling */
-        #networkGraph {
-            margin-top: 30px;
+        #closePanel:hover {
+            color: #333;
+        }
+        
+        /* Chart styling */
+        .chart-container {
             width: 100%;
-            height: 500px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            height: 100%;
+            min-height: 300px;
+        }
+        
+        /* Collaboration network styling */
+        #networkGraph {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #eee;
+            border-radius: 4px;
         }
         .node {
             stroke: #fff;
@@ -56,50 +133,51 @@
             stroke: #999;
             stroke-opacity: 0.6;
         }
-        /* Raw data styling */
-        .raw-data-section {
-            margin-bottom: 30px;
-            padding: 15px;
-            background-color: #f8f8f8;
-            border-radius: 5px;
-        }
-        #commitsTable {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            margin-bottom: 10px;
-        }
-        #commitsTable table {
+        
+        /* Table styling */
+        table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 15px;
         }
-        #commitsTable th, #commitsTable td {
-            padding: 8px;
+        th, td {
+            padding: 10px;
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
-        #commitsTable th {
-            background-color: #f1f1f1;
-            position: sticky;
-            top: 0;
+        th {
+            background-color: #f2f2f2;
         }
-        #loadMoreCommits {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 8px 16px;
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        /* Contributor list styling */
+        .contributor-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .contributor-list li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
             cursor: pointer;
-            border-radius: 4px;
         }
-        #loadMoreCommits:hover {
-            background-color: #3e8e41;
+        .contributor-list li:hover {
+            background-color: #f5f5f5;
         }
-        /* Tab styling */
+        
+        /* Tabs for Raw Data */
+        .tab-container {
+            margin-top: 20px;
+        }
         .tab {
             overflow: hidden;
             border: 1px solid #ccc;
             background-color: #f1f1f1;
-            margin-top: 20px;
+            border-radius: 4px 4px 0 0;
         }
         .tab button {
             background-color: inherit;
@@ -107,20 +185,24 @@
             border: none;
             outline: none;
             cursor: pointer;
-            padding: 10px 16px;
+            padding: 12px 16px;
             transition: 0.3s;
+            font-size: 14px;
         }
         .tab button:hover {
             background-color: #ddd;
         }
         .tab button.active {
-            background-color: #ccc;
+            background-color: white;
+            border-bottom: 2px solid #2196F3;
         }
         .tabcontent {
             display: none;
-            padding: 6px 12px;
+            padding: 15px;
             border: 1px solid #ccc;
             border-top: none;
+            border-radius: 0 0 4px 4px;
+            background-color: white;
         }
         .tabcontent.active {
             display: block;
@@ -128,130 +210,164 @@
     </style>
 </head>
 <body>
-<h1>Analysis Complete</h1>
-<p>Total Creates: <%= totalCreates %></p>
-<p>Total Edits: <%= totalEdits %></p>
-<p>Since Date: <%= sinceDate %></p>
-
-<!-- Store the analysis key so it can be used by the front end -->
-<script>
-    const analysisKey = "<%= analysisKey %>";
-</script>
-
-<!-- Tabs -->
-<div class="tab">
-    <button class="tablinks active" onclick="openTab(event, 'scatterPlotTab')">Scatter Plot</button>
-    <button class="tablinks" onclick="openTab(event, 'networkTab')">Collaboration Network</button>
-    <button class="tablinks" onclick="openTab(event, 'rawDataTab')">Raw Data</button>
+<div class="container">
+    <header>
+        <div class="header-details">
+            <h1><%= analysisDetails.label %> Engineering Metrics</h1>
+            <p>
+                <strong>Path:</strong> <%= analysisDetails.local_path %> | 
+                <strong>Period:</strong> <%= analysisDetails.since_date %> to present | 
+                <strong>Generated:</strong> <%= new Date(analysisDetails.created_at).toLocaleString() %>
+            </p>
+        </div>
+        <div class="header-actions">
+            <a href="/" class="back-link">Back to Dashboard</a>
+        </div>
+    </header>
+    
+    <!-- Store the analysis key so it can be used by the front end -->
+    <script>
+        const analysisKey = "<%= analysisKey %>";
+    </script>
+    
+    <!-- Top metrics section -->
+    <div class="metrics-grid">
+        <!-- Contributor Overview Card -->
+        <div class="card">
+            <h2>Contributor Overview</h2>
+            <div id="contributorScatterPlot" class="chart-container"></div>
+            <div id="tooltip"></div>
+        </div>
+        
+        <!-- File Activity Card -->
+        <div class="card">
+            <h2>File Activity</h2>
+            <div class="chart-container">
+                <div id="fileChangeTypes" style="height: 300px;"></div>
+            </div>
+        </div>
+        
+        <!-- PR Timeline Card -->
+        <div class="card metrics-full">
+            <h2>PR Timeline</h2>
+            <div class="chart-container">
+                <div id="prTimeByMonth"></div>
+            </div>
+        </div>
+        
+        <!-- Collaboration Network Card -->
+        <div class="card metrics-full">
+            <h2>Collaboration Network</h2>
+            <p>This graph shows how developers collaborate. Each link represents one developer editing files created by another.</p>
+            <div id="networkGraph"></div>
+        </div>
+    </div>
+    
+    <!-- Contributor Metrics -->
+    <div class="metrics-grid">
+        <!-- Top Contributors Card -->
+        <div class="card">
+            <h2>Top Contributors by Influence</h2>
+            <p>Influence score combines creating files that others modify with editing activity.</p>
+            <ul class="contributor-list">
+                <% topInfluencers.slice(0, 10).forEach(influencer => { %>
+                    <li onclick="fetchContributorDetails('<%= influencer.author %>')">
+                        <strong><%= influencer.author %></strong> – Score: <%= influencer.influenceScore %>
+                        <div style="font-size: 0.9em; color: #666;">
+                            Creates: <%= influencer.total_creates %>, 
+                            Edits: <%= influencer.total_edits %>,
+                            Edits on creations: <%= influencer.times_edited_on_created_files %>
+                        </div>
+                    </li>
+                <% }); %>
+            </ul>
+        </div>
+        
+        <!-- Top Creators Card -->
+        <div class="card">
+            <h2>Top File Creators</h2>
+            <p>Contributors who create the most new files.</p>
+            <ul class="contributor-list">
+                <% topCreators.slice(0, 10).forEach(creator => { %>
+                    <li onclick="fetchContributorDetails('<%= creator.author %>')">
+                        <strong><%= creator.author %></strong> – Creates: <%= creator.creates %>
+                    </li>
+                <% }); %>
+            </ul>
+        </div>
+        
+        <!-- Commit Activity Card -->
+        <div class="card">
+            <h2>Commit Activity</h2>
+            <div class="chart-container">
+                <div id="commitActivity"></div>
+            </div>
+        </div>
+        
+        <!-- Hot Files Card -->
+        <div class="card">
+            <h2>Hot Files (Most Changed)</h2>
+            <div class="chart-container">
+                <div id="hotFiles"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Raw Data Section with Tabs -->
+    <div class="card">
+        <h2>Detailed Data</h2>
+        
+        <div class="tab-container">
+            <div class="tab">
+                <button class="tablinks active" onclick="openTab(event, 'commitsTab')">Commits</button>
+                <button class="tablinks" onclick="openTab(event, 'prLifecycleTab')">PR Lifecycle</button>
+                <button class="tablinks" onclick="openTab(event, 'fileExtensionsTab')">File Extensions</button>
+                <button class="tablinks" onclick="openTab(event, 'commitTypesTab')">Work Types</button>
+            </div>
+            
+            <div id="commitsTab" class="tabcontent active">
+                <h3>Recent Commits</h3>
+                <div id="commitsTable"></div>
+                <button id="loadMoreCommits" style="margin-top: 10px; padding: 8px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">Load More</button>
+            </div>
+            
+            <div id="prLifecycleTab" class="tabcontent">
+                <h3>Pull Request Lifecycle</h3>
+                <div id="prLifecycle"></div>
+            </div>
+            
+            <div id="fileExtensionsTab" class="tabcontent">
+                <h3>File Extensions</h3>
+                <div id="fileExtensions"></div>
+            </div>
+            
+            <div id="commitTypesTab" class="tabcontent">
+                <h3>Work Type by Contributor</h3>
+                <div id="commitTypes"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Scatter Plot Tab -->
-<div id="scatterPlotTab" class="tabcontent active">
-    <div id="scatterPlot"></div>
-    <div id="tooltip"></div>
-</div>
-
-<!-- Network Graph Tab -->
-<div id="networkTab" class="tabcontent">
-    <h2>Collaboration Network</h2>
-    <p>This graph shows how developers collaborate. Each link represents one developer editing files created by another.</p>
-    <p>Thicker lines indicate more frequent collaboration.</p>
-    <div id="networkGraph"></div>
-</div>
-
-<!-- Raw Data Tab -->
-<div id="rawDataTab" class="tabcontent">
-    <h2>Raw Git Data</h2>
-    <p>This tab shows the raw git data collected during analysis.</p>
-    
-    <div class="raw-data-section">
-        <h3>Recent Commits</h3>
-        <div id="commitsTable"></div>
-        <button id="loadMoreCommits">Load More</button>
-    </div>
-    
-    <div class="raw-data-section">
-        <h3>File Change Types</h3>
-        <div id="fileChangeTypes"></div>
-    </div>
-    
-    <div class="raw-data-section">
-        <h3>File Extensions</h3>
-        <div id="fileExtensions"></div>
-    </div>
-    
-    <div class="raw-data-section">
-        <h3>Commit Activity</h3>
-        <div id="commitActivity"></div>
-    </div>
-    
-    <div class="raw-data-section">
-        <h3>PR Lifecycle</h3>
-        <div id="prLifecycle"></div>
-    </div>
-    
-    <div class="raw-data-section">
-        <h3>PR Merge Time by Month</h3>
-        <div id="prTimeByMonth"></div>
-    </div>
-    
-    <div class="raw-data-section">
-        <h3>Hot Files (Most Changed)</h3>
-        <div id="hotFiles"></div>
-    </div>
-    
-    <div class="raw-data-section">
-        <h3>Work Type by Contributor</h3>
-        <div id="commitTypes"></div>
-    </div>
-</div>
-
-<!-- Top 20 Influencers -->
-<h2>Top 20 Influencers</h2>
-<ul>
-    <% topInfluencers.forEach(influencer => { %>
-        <li>
-            <strong><%= influencer.author %></strong> – Influence Score: <%= influencer.influenceScore %>
-            (Creates: <%= influencer.total_creates %>, Edits: <%= influencer.total_edits %>,
-            Edited on Created Files: <%= influencer.times_edited_on_created_files %>)
-        </li>
-    <% }); %>
-</ul>
-
-<!-- Top 20 Creators -->
-<h2>Top 20 Creators</h2>
-<ul>
-    <% topCreators.forEach(creator => { %>
-        <li>
-            <strong><%= creator.author %></strong> – Creates: <%= creator.creates %>
-        </li>
-    <% }); %>
-</ul>
-
-<!-- Top 20 Editors -->
-<h2>Top 20 Editors</h2>
-<ul>
-    <% topEditors.forEach(editor => { %>
-        <li>
-            <strong><%= editor.author %></strong> – Edits: <%= editor.edits %>
-        </li>
-    <% }); %>
-</ul>
-
-<!-- Top 20 People Who Create Files That Get Edited -->
-<h2>Top 20 People Whose Files Get Edited</h2>
-<ul>
-    <% topEditedCreators.forEach(item => { %>
-        <li>
-            <strong><%= item.author %></strong> – Times Edited: <%= item.times_edited %>
-        </li>
-    <% }); %>
-</ul>
 <!-- Side panel for detailed contributor info -->
 <div id="sidePanel">
     <span id="closePanel">&times;</span>
     <div id="panelContent"></div>
 </div>
+
+<script>
+    // Function for fetching contributor details
+    function fetchContributorDetails(author) {
+        fetch(`/api/contributor/${encodeURIComponent(author)}?analysisKey=${encodeURIComponent(analysisKey)}`)
+            .then(response => response.json())
+            .then(details => {
+                showSidePanel(details);
+            })
+            .catch(err => {
+                console.error('Error fetching contributor details:', err);
+            });
+    }
+</script>
 
 <script>
     // Function to render PR Time by Month chart
@@ -421,16 +537,22 @@
 
     // Function to open tabs
     function openTab(evt, tabName) {
-        const tabcontent = document.getElementsByClassName("tabcontent");
+        // Find the parent tab container
+        const tabContainer = evt.currentTarget.closest('.tab-container');
+        
+        // Get tabcontent elements only within this container
+        const tabcontent = tabContainer.getElementsByClassName("tabcontent");
         for (let i = 0; i < tabcontent.length; i++) {
             tabcontent[i].classList.remove("active");
         }
         
-        const tablinks = document.getElementsByClassName("tablinks");
+        // Get tablinks elements only within this container
+        const tablinks = tabContainer.getElementsByClassName("tablinks");
         for (let i = 0; i < tablinks.length; i++) {
             tablinks[i].classList.remove("active");
         }
         
+        // Activate the selected tab
         document.getElementById(tabName).classList.add("active");
         evt.currentTarget.classList.add("active");
     }
@@ -439,7 +561,7 @@
     const width = 600, height = 400;
     const margin = { top: 50, right: 50, bottom: 50, left: 50 };
 
-    const svg = d3.select("#scatterPlot")
+    const svg = d3.select("#contributorScatterPlot")
         .append("svg")
         .attr("width", width)
         .attr("height", height);
@@ -565,14 +687,28 @@
         document.getElementById('sidePanel').classList.remove('open');
     });
 
-    // Tab Initializations
+    // Initialize data visualizations
     document.addEventListener('DOMContentLoaded', function() {
-        // Create force-directed graph when network tab is clicked
-        document.querySelector('button[onclick="openTab(event, \'networkTab\')"]').addEventListener('click', createNetworkGraph);
+        // Initialize all charts on page load
+        initVisualizations();
         
-        // Load raw data when raw data tab is clicked
-        document.querySelector('button[onclick="openTab(event, \'rawDataTab\')"]').addEventListener('click', initRawDataTab);
+        // Add event listener for tab changes in the detailed data section
+        document.querySelectorAll('.tab button').forEach(button => {
+            button.addEventListener('click', function() {
+                // The target tab is already handled by openTab function
+                // Just ensure all visualizations are properly rendered
+                window.dispatchEvent(new Event('resize'));
+            });
+        });
     });
+    
+    // Function to initialize all visualizations
+    function initVisualizations() {
+        createNetworkGraph();
+        loadCommitsData();
+        loadFileActivityData();
+        loadPRMetricsData();
+    }
 
     function createNetworkGraph() {
         // Only create the graph once
@@ -691,42 +827,63 @@
     }
     
     // Raw data visualization functions
-    function initRawDataTab() {
+    // Function to load commits data for the commits tab
+    function loadCommitsData() {
         if (document.querySelector('#commitsTable table')) return; // Only load once
         
-        // Load all data in parallel
+        fetch(`/api/commits/${analysisKey}`)
+            .then(res => res.json())
+            .then(commits => {
+                renderCommitsTable(commits.slice(0, 50)); // Show first 50 commits
+                
+                // Store all commits for pagination
+                window.allCommits = commits;
+                window.currentPage = 1;
+                
+                // Add event listener for "Load More" button
+                document.getElementById('loadMoreCommits').addEventListener('click', loadMoreCommits);
+            })
+            .catch(error => {
+                console.error('Error loading commits data:', error);
+                document.getElementById('commitsTable').innerHTML = '<p>Error loading commit data. Please try again.</p>';
+            });
+    }
+    
+    // Function to load file activity data
+    function loadFileActivityData() {
+        // Load file changes and extensions data
         Promise.all([
-            fetch(`/api/commits/${analysisKey}`).then(res => res.json()),
             fetch(`/api/analytics/changes-by-type/${analysisKey}`).then(res => res.json()),
             fetch(`/api/analytics/file-extensions/${analysisKey}`).then(res => res.json()),
+            fetch(`/api/analytics/hot-files/${analysisKey}`).then(res => res.json())
+        ])
+        .then(([changeTypes, fileExtensions, hotFiles]) => {
+            renderFileChangeTypes(changeTypes);
+            renderFileExtensions(fileExtensions);
+            renderHotFiles(hotFiles);
+        })
+        .catch(error => {
+            console.error('Error loading file activity data:', error);
+        });
+    }
+    
+    // Function to load PR metrics and commit activity data
+    function loadPRMetricsData() {
+        // Load PR lifecycle and commit activity data
+        Promise.all([
             fetch(`/api/analytics/commits-by-day/${analysisKey}`).then(res => res.json()),
             fetch(`/api/analytics/pr-lifecycle/${analysisKey}`).then(res => res.json()),
             fetch(`/api/analytics/pr-time-by-month/${analysisKey}`).then(res => res.json()),
-            fetch(`/api/analytics/hot-files/${analysisKey}`).then(res => res.json()),
             fetch(`/api/analytics/commit-types/${analysisKey}`).then(res => res.json())
         ])
-        .then(([commits, changeTypes, fileExtensions, commitsByDay, prLifecycle, prTimeByMonth, hotFiles, commitTypes]) => {
-            renderCommitsTable(commits.slice(0, 50)); // Show first 50 commits
-            renderFileChangeTypes(changeTypes);
-            renderFileExtensions(fileExtensions);
+        .then(([commitsByDay, prLifecycle, prTimeByMonth, commitTypes]) => {
             renderCommitActivity(commitsByDay);
             renderPRLifecycle(prLifecycle);
             renderPRTimeByMonth(prTimeByMonth);
-            renderHotFiles(hotFiles);
             renderCommitTypes(commitTypes);
-            
-            // Store all commits for pagination
-            window.allCommits = commits;
-            window.currentPage = 1;
-            
-            // Add event listener for "Load More" button
-            document.getElementById('loadMoreCommits').addEventListener('click', loadMoreCommits);
         })
         .catch(error => {
-            console.error('Error loading raw data:', error);
-            document.querySelectorAll('.raw-data-section').forEach(section => {
-                section.innerHTML = '<p>Error loading data. Please try again.</p>';
-            });
+            console.error('Error loading PR metrics data:', error);
         });
     }
     

@@ -396,38 +396,17 @@ router.get('/contributor/:author', async (req, res) => {
 });
 // Endpoint to trigger analysis
 router.post('/analyze', async (req, res) => {
-    const { localPath, years } = req.body;
+    const { localPath, years, label } = req.body;
     try {
-        // Run analysis and get the analysisKey
-        const analysis = await service.analyzeAllRepositories(localPath, years || 10);
-        // Pass the analysisKey into the contributor query
-        const contributors = await service.getContributors(analysis.analysisKey);
-
-        // Convert BigInts to Numbers in your contributors array and other numeric fields
-        const cleanContributors = convertBigInts(contributors);
-
-        const topInfluencers = await service.getTopInfluencers(analysis.analysisKey);
-
-        const topCreators = await service.getTopCreators(analysis.analysisKey);
-        const topEditors = await service.getTopEditors(analysis.analysisKey);
-        const topEditedCreators = await service.getTopEditedCreators(analysis.analysisKey);
+        if (!label) {
+            return res.status(400).send('Team/Group label is required');
+        }
         
-        // Get collaboration network data
-        const networkData = await service.getCollaborationNetwork(analysis.analysisKey);
-        const cleanNetworkData = convertBigInts(networkData);
-
-        res.render('results', {
-            totalCreates: analysis.totalCreates,
-            totalEdits: analysis.totalEdits,
-            sinceDate: analysis.sinceDate,
-            analysisKey: analysis.analysisKey,
-            contributors: cleanContributors,
-            topInfluencers: topInfluencers,
-            topCreators: topCreators,
-            topEditors: topEditors,
-            topEditedCreators: topEditedCreators,
-            networkData: cleanNetworkData
-        });
+        // Run analysis with the label parameter
+        const analysis = await service.analyzeAllRepositories(localPath, years || 1, label);
+        
+        // Redirect to the results page
+        res.redirect(`/results/${analysis.analysisKey}`);
     } catch (error) {
         console.error('Error during analysis:', error);
         res.status(500).send('Error performing analysis: ' + error.toString());

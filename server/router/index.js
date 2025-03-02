@@ -1,8 +1,9 @@
 // api.js
 const express = require('express');
-const router = express.Router();
 const service = require('../services');
 const db = require('../db');
+
+const router = express.Router();
 
 // New endpoint to fetch detailed contributor info
 router.get('/contributor/:author', async (req, res) => {
@@ -24,25 +25,27 @@ router.get('/contributor/:author', async (req, res) => {
 router.post('/analyze', async (req, res) => {
     const { localPath, years } = req.body;
     try {
+        // Run analysis and get the analysisKey
         const analysis = await service.analyzeAllRepositories(localPath, years || 10);
+        // Pass the analysisKey into the contributor query
         const contributors = await service.getContributors(analysis.analysisKey);
 
-        // Build the result context expected by your EJS template.
+        // Convert BigInts to Numbers in your contributors array and other numeric fields
+        const cleanContributors = convertBigInts(contributors);
+
         const result = {
-            totalCreates: analysis.totalCreates,
-            totalEdits: analysis.totalEdits,
+            totalCreates: Number(analysis.totalCreates),
+            totalEdits: Number(analysis.totalEdits),
             sinceDate: analysis.sinceDate,
             analysisKey: analysis.analysisKey,
-            contributors, // an array of objects with {author, creates, edits}
+            contributors: cleanContributors,
         };
-
         res.render('results', { result });
     } catch (error) {
         console.error('Error during analysis:', error);
         res.status(500).send('Error performing analysis: ' + error.toString());
     }
 });
-
 // Healthcheck endpoint
 router.get('/health', async (req, res) => {
     try {
@@ -53,5 +56,19 @@ router.get('/health', async (req, res) => {
         res.status(500).json({ status: "ERROR", error: err.toString() });
     }
 });
+function convertBigInts(obj) {
+    if (typeof obj === 'bigint') {
+        return Number(obj);
+    } else if (Array.isArray(obj)) {
+        return obj.map(convertBigInts);
+    } else if (obj !== null && typeof obj === 'object') {
+        const newObj = {};
+        for (const key in obj) {
+            newObj[key] = convertBigInts(obj[key]);
+        }
+        return newObj;
+    }
+    return obj;
+}
 
 module.exports = router;

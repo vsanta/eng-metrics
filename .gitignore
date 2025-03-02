@@ -1,3 +1,4 @@
 .aider*
 .idea/
 node_modules/
+git_influence.db

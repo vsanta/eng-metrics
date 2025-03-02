@@ -5,6 +5,18 @@ const db = require('../db');
 
 const router = express.Router();
 
+// Endpoint to get collaboration network data
+router.get('/network/:analysisKey', async (req, res) => {
+    const { analysisKey } = req.params;
+    try {
+        const networkData = await service.getCollaborationNetwork(analysisKey);
+        res.json(networkData);
+    } catch (error) {
+        console.error('Error fetching collaboration network:', error);
+        res.status(500).json({ error: error.toString() });
+    }
+});
+
 // New endpoint to fetch detailed contributor info
 router.get('/contributor/:author', async (req, res) => {
     const { author } = req.params;
@@ -40,17 +52,22 @@ router.post('/analyze', async (req, res) => {
         const topCreators = await service.getTopCreators(analysis.analysisKey);
         const topEditors = await service.getTopEditors(analysis.analysisKey);
         const topEditedCreators = await service.getTopEditedCreators(analysis.analysisKey);
+        
+        // Get collaboration network data
+        const networkData = await service.getCollaborationNetwork(analysis.analysisKey);
+        const cleanNetworkData = convertBigInts(networkData);
 
         res.render('results', {
             totalCreates: analysis.totalCreates,
             totalEdits: analysis.totalEdits,
             sinceDate: analysis.sinceDate,
             analysisKey: analysis.analysisKey,
-            contributors:cleanContributors,
+            contributors: cleanContributors,
             topInfluencers: topInfluencers,
-            topCreators:topCreators,
+            topCreators: topCreators,
             topEditors: topEditors,
-            topEditedCreators: topEditedCreators
+            topEditedCreators: topEditedCreators,
+            networkData: cleanNetworkData
         });
     } catch (error) {
         console.error('Error during analysis:', error);

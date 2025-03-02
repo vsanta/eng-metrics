@@ -107,18 +107,23 @@ async function analyzeRepository(repoPath, sinceDate, analysisKey) {
     console.log(`Analyzing repository: ${repoName} at ${repoPath} key ${analysisKey}`);
 
     // Check if repository record already exists for this analysisKey
-    const existingRepo = await db.getQuery(
-        "SELECT 1 FROM repositories WHERE name = ? AND analysis_key = ?",
-        [repoName, analysisKey]
-    );
-    if (existingRepo.length === 0) {
-        await db.runQuery(
-            "INSERT INTO repositories (name, analysis_key) VALUES (?, ?)",
+    try {
+        const existingRepo = await db.getQuery(
+            "SELECT 1 FROM repositories WHERE name = ? AND analysis_key = ?",
             [repoName, analysisKey]
         );
-        console.log("Repository insert done");
-    } else {
-        console.log("Repository record already exists; skipping insert.");
+        if (existingRepo.length === 0) {
+            await db.runQuery(
+                "INSERT INTO repositories (name, analysis_key) VALUES (?, ?)",
+                [repoName, analysisKey]
+            );
+            console.log("Repository insert done");
+        } else {
+            console.log("Repository record already exists; skipping insert.");
+        }
+    } catch (error) {
+        console.error("Error inserting repository record:", error);
+        // Continue anyway - we don't want to fail the entire analysis if this fails
     }
 
     // Run git commands as before
@@ -344,16 +349,31 @@ async function getInfluenceRank(author, analysisKey) {
     if (rows.length > 0) return rows[0].influence_rank;
     return null;
 }
+// Get collaboration network data - who worked on files created by others
+async function getCollaborationNetwork(analysisKey) {
+    const query = `
+    SELECT 
+        creator, 
+        editor,
+        COUNT(*) AS collaboration_count
+    FROM edits_to_creations
+    WHERE analysis_key = ?
+    GROUP BY creator, editor
+    ORDER BY collaboration_count DESC
+    `;
+    
+    return await db.getQuery(query, [analysisKey]);
+}
+
 module.exports = {
     analyzeAllRepositories,
     getContributorDetails,
     analyzeRepository,
     getTopInfluencers,
-    getTopInfluencers,
     getContributors,
-    getTopInfluencers,
     getTopCreators,
     getTopEditors,
     getTopEditedCreators,
     getInfluenceRank,
+    getCollaborationNetwork,
 };

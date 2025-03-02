@@ -8,8 +8,10 @@ const db = require('./db');
 const app = express();
 const PORT = 3000;
 
-// Initialize the SQLite database (change ':memory:' to a file path if needed)
+// Initialize the DuckDB database
 db.initDB('git_influence.db');
+// Create database tables if they don't exist
+db.createTables();
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));

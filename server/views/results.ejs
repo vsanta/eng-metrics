@@ -40,6 +40,53 @@
             font-size: 18px;
             font-weight: bold;
         }
+        /* Network graph styling */
+        #networkGraph {
+            margin-top: 30px;
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .node {
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+        }
+        /* Tab styling */
+        .tab {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+            margin-top: 20px;
+        }
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 10px 16px;
+            transition: 0.3s;
+        }
+        .tab button:hover {
+            background-color: #ddd;
+        }
+        .tab button.active {
+            background-color: #ccc;
+        }
+        .tabcontent {
+            display: none;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-top: none;
+        }
+        .tabcontent.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -53,9 +100,25 @@
     const analysisKey = "<%= analysisKey %>";
 </script>
 
-<!-- Container for the scatter plot -->
-<div id="scatterPlot"></div>
-<div id="tooltip"></div>
+<!-- Tabs -->
+<div class="tab">
+    <button class="tablinks active" onclick="openTab(event, 'scatterPlotTab')">Scatter Plot</button>
+    <button class="tablinks" onclick="openTab(event, 'networkTab')">Collaboration Network</button>
+</div>
+
+<!-- Scatter Plot Tab -->
+<div id="scatterPlotTab" class="tabcontent active">
+    <div id="scatterPlot"></div>
+    <div id="tooltip"></div>
+</div>
+
+<!-- Network Graph Tab -->
+<div id="networkTab" class="tabcontent">
+    <h2>Collaboration Network</h2>
+    <p>This graph shows how developers collaborate. Each link represents one developer editing files created by another.</p>
+    <p>Thicker lines indicate more frequent collaboration.</p>
+    <div id="networkGraph"></div>
+</div>
 
 <!-- Top 20 Influencers -->
 <h2>Top 20 Influencers</h2>
@@ -105,9 +168,27 @@
 </div>
 
 <script>
-    // Data injected from the server: an array of contributor objects.
+    // Data injected from the server
     const dataPoints = <%- JSON.stringify(contributors || []) %>;
+    const networkData = <%- JSON.stringify(networkData || []) %>;
 
+    // Function to open tabs
+    function openTab(evt, tabName) {
+        const tabcontent = document.getElementsByClassName("tabcontent");
+        for (let i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].classList.remove("active");
+        }
+        
+        const tablinks = document.getElementsByClassName("tablinks");
+        for (let i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+        
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    // Scatter Plot Visualization
     const width = 600, height = 400;
     const margin = { top: 50, right: 50, bottom: 50, left: 50 };
 
@@ -213,6 +294,128 @@
     document.getElementById('closePanel').addEventListener('click', () => {
         document.getElementById('sidePanel').classList.remove('open');
     });
+
+    // Network Graph Visualization
+    document.addEventListener('DOMContentLoaded', function() {
+        // Create force-directed graph when network tab is clicked
+        document.querySelector('button[onclick="openTab(event, \'networkTab\')"]').addEventListener('click', createNetworkGraph);
+    });
+
+    function createNetworkGraph() {
+        // Only create the graph once
+        if (document.querySelector('#networkGraph svg')) return;
+        
+        const graphWidth = document.getElementById('networkGraph').clientWidth;
+        const graphHeight = 500;
+        
+        // Create nodes from unique creators and editors
+        const uniqueAuthors = new Set();
+        networkData.forEach(d => {
+            uniqueAuthors.add(d.creator);
+            uniqueAuthors.add(d.editor);
+        });
+        
+        const nodes = Array.from(uniqueAuthors).map(name => ({ id: name }));
+        
+        // Create links from collaboration data
+        const links = networkData.map(d => ({
+            source: d.creator,
+            target: d.editor,
+            value: d.collaboration_count
+        }));
+        
+        // Create color scale for the nodes
+        const color = d3.scaleOrdinal(d3.schemeCategory10);
+        
+        // Create force simulation
+        const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links).id(d => d.id))
+            .force("charge", d3.forceManyBody().strength(-200))
+            .force("center", d3.forceCenter(graphWidth / 2, graphHeight / 2))
+            .force("collision", d3.forceCollide().radius(30));
+        
+        // Create SVG for the network
+        const svg = d3.select("#networkGraph")
+            .append("svg")
+            .attr("width", graphWidth)
+            .attr("height", graphHeight);
+            
+        // Define arrow markers for directed graph
+        svg.append("defs").append("marker")
+            .attr("id", "arrowhead")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 25)
+            .attr("refY", 0)
+            .attr("orient", "auto")
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .append("path")
+            .attr("d", "M0,-5L10,0L0,5")
+            .attr("fill", "#999");
+            
+        // Add links with varying stroke-width based on collaboration count
+        const link = svg.append("g")
+            .selectAll("line")
+            .data(links)
+            .enter().append("line")
+            .attr("class", "link")
+            .attr("marker-end", "url(#arrowhead)")
+            .style("stroke-width", d => Math.sqrt(d.value));
+            
+        // Create node group for circles and labels
+        const node = svg.append("g")
+            .selectAll("g")
+            .data(nodes)
+            .enter().append("g")
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+                
+        // Add circle to each node
+        node.append("circle")
+            .attr("class", "node")
+            .attr("r", 10)
+            .attr("fill", d => color(d.id))
+            .append("title")
+            .text(d => d.id);
+            
+        // Add text label to each node
+        node.append("text")
+            .attr("dx", 12)
+            .attr("dy", ".35em")
+            .text(d => d.id);
+            
+        // Update positions on each tick of the simulation
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+                
+            node
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+        
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    }
 </script>
 </body>
 </html>

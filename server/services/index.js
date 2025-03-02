@@ -84,19 +84,25 @@ async function getContributorDetails(author, analysisKey) {
     };
 }
 
-async function analyzeAllRepositories(localPath, years, label) {
-    const analysisKey = generateAnalysisKey(localPath, years);
-    const sinceDate = new Date(Date.now() - years * 365 * 24 * 3600 * 1000)
-        .toISOString()
-        .slice(0, 10);
-    console.log(`Analyzing repositories in ${localPath} since ${sinceDate} with key: ${analysisKey}, label: ${label}`);
+async function analyzeAllRepositories(localPath, startDate, endDate, label) {
+    const analysisKey = generateAnalysisKey(localPath, startDate, endDate);
+    
+    // Format dates consistently
+    const formattedStartDate = new Date(startDate).toISOString().slice(0, 10);
+    
+    // If endDate is not provided, use current date
+    const formattedEndDate = endDate ? 
+        new Date(endDate).toISOString().slice(0, 10) : 
+        new Date().toISOString().slice(0, 10);
+    
+    console.log(`Analyzing repositories in ${localPath} from ${formattedStartDate} to ${formattedEndDate} with key: ${analysisKey}, label: ${label}`);
 
     // Store analysis metadata
     try {
         await db.runQuery(
-            `INSERT INTO analyses (analysis_key, label, local_path, years, since_date) 
+            `INSERT INTO analyses (analysis_key, label, local_path, start_date, end_date) 
              VALUES (?, ?, ?, ?, ?)`,
-            [analysisKey, label, localPath, years, sinceDate]
+            [analysisKey, label, localPath, formattedStartDate, formattedEndDate]
         );
     } catch (error) {
         console.error('Error storing analysis metadata:', error);
@@ -106,11 +112,18 @@ async function analyzeAllRepositories(localPath, years, label) {
     const repos = findRepositories(localPath);
     let totalCreates = 0, totalEdits = 0;
     for (const repo of repos) {
-        const { creates, edits } = await analyzeRepository(repo, sinceDate, analysisKey);
+        const { creates, edits } = await analyzeRepository(repo, formattedStartDate, analysisKey, formattedEndDate);
         totalCreates += Number(creates);
         totalEdits += Number(edits);
     }
-    return { totalCreates, totalEdits, sinceDate, analysisKey, label };
+    return { 
+        totalCreates, 
+        totalEdits, 
+        startDate: formattedStartDate, 
+        endDate: formattedEndDate, 
+        analysisKey, 
+        label 
+    };
 }
 
 

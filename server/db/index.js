@@ -17,9 +17,9 @@ function createTables() {
       analysis_key TEXT UNIQUE,
       label TEXT,
       local_path TEXT,
-      years FLOAT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      since_date DATE
+      start_date DATE,
+      end_date DATE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `, (err) => { if (err) console.error(err); });
     

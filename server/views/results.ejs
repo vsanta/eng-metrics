@@ -56,6 +56,44 @@
             stroke: #999;
             stroke-opacity: 0.6;
         }
+        /* Raw data styling */
+        .raw-data-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+        }
+        #commitsTable {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+        }
+        #commitsTable table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #commitsTable th, #commitsTable td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        #commitsTable th {
+            background-color: #f1f1f1;
+            position: sticky;
+            top: 0;
+        }
+        #loadMoreCommits {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        #loadMoreCommits:hover {
+            background-color: #3e8e41;
+        }
         /* Tab styling */
         .tab {
             overflow: hidden;
@@ -104,6 +142,7 @@
 <div class="tab">
     <button class="tablinks active" onclick="openTab(event, 'scatterPlotTab')">Scatter Plot</button>
     <button class="tablinks" onclick="openTab(event, 'networkTab')">Collaboration Network</button>
+    <button class="tablinks" onclick="openTab(event, 'rawDataTab')">Raw Data</button>
 </div>
 
 <!-- Scatter Plot Tab -->
@@ -118,6 +157,33 @@
     <p>This graph shows how developers collaborate. Each link represents one developer editing files created by another.</p>
     <p>Thicker lines indicate more frequent collaboration.</p>
     <div id="networkGraph"></div>
+</div>
+
+<!-- Raw Data Tab -->
+<div id="rawDataTab" class="tabcontent">
+    <h2>Raw Git Data</h2>
+    <p>This tab shows the raw git data collected during analysis.</p>
+    
+    <div class="raw-data-section">
+        <h3>Recent Commits</h3>
+        <div id="commitsTable"></div>
+        <button id="loadMoreCommits">Load More</button>
+    </div>
+    
+    <div class="raw-data-section">
+        <h3>File Change Types</h3>
+        <div id="fileChangeTypes"></div>
+    </div>
+    
+    <div class="raw-data-section">
+        <h3>File Extensions</h3>
+        <div id="fileExtensions"></div>
+    </div>
+    
+    <div class="raw-data-section">
+        <h3>Commit Activity</h3>
+        <div id="commitActivity"></div>
+    </div>
 </div>
 
 <!-- Top 20 Influencers -->
@@ -295,10 +361,13 @@
         document.getElementById('sidePanel').classList.remove('open');
     });
 
-    // Network Graph Visualization
+    // Tab Initializations
     document.addEventListener('DOMContentLoaded', function() {
         // Create force-directed graph when network tab is clicked
         document.querySelector('button[onclick="openTab(event, \'networkTab\')"]').addEventListener('click', createNetworkGraph);
+        
+        // Load raw data when raw data tab is clicked
+        document.querySelector('button[onclick="openTab(event, \'rawDataTab\')"]').addEventListener('click', initRawDataTab);
     });
 
     function createNetworkGraph() {
@@ -415,6 +484,445 @@
             d.fx = null;
             d.fy = null;
         }
+    }
+    
+    // Raw data visualization functions
+    function initRawDataTab() {
+        if (document.querySelector('#commitsTable table')) return; // Only load once
+        
+        // Load all data in parallel
+        Promise.all([
+            fetch(`/api/commits/${analysisKey}`).then(res => res.json()),
+            fetch(`/api/analytics/changes-by-type/${analysisKey}`).then(res => res.json()),
+            fetch(`/api/analytics/file-extensions/${analysisKey}`).then(res => res.json()),
+            fetch(`/api/analytics/commits-by-day/${analysisKey}`).then(res => res.json())
+        ])
+        .then(([commits, changeTypes, fileExtensions, commitsByDay]) => {
+            renderCommitsTable(commits.slice(0, 50)); // Show first 50 commits
+            renderFileChangeTypes(changeTypes);
+            renderFileExtensions(fileExtensions);
+            renderCommitActivity(commitsByDay);
+            
+            // Store all commits for pagination
+            window.allCommits = commits;
+            window.currentPage = 1;
+            
+            // Add event listener for "Load More" button
+            document.getElementById('loadMoreCommits').addEventListener('click', loadMoreCommits);
+        })
+        .catch(error => {
+            console.error('Error loading raw data:', error);
+            document.querySelectorAll('.raw-data-section').forEach(section => {
+                section.innerHTML = '<p>Error loading data. Please try again.</p>';
+            });
+        });
+    }
+    
+    function loadMoreCommits() {
+        window.currentPage++;
+        const start = (window.currentPage - 1) * 50;
+        const end = start + 50;
+        const commits = window.allCommits.slice(start, end);
+        
+        if (commits.length === 0) {
+            document.getElementById('loadMoreCommits').disabled = true;
+            document.getElementById('loadMoreCommits').textContent = 'No More Commits';
+            return;
+        }
+        
+        // Append to the existing table
+        const tbody = document.querySelector('#commitsTable table tbody');
+        commits.forEach(commit => {
+            const row = document.createElement('tr');
+            
+            // Format the date
+            const date = new Date(commit.timestamp);
+            const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+            
+            row.innerHTML = `
+                <td>${commit.hash.substring(0, 7)}</td>
+                <td>${commit.author}</td>
+                <td>${formattedDate}</td>
+                <td>${commit.message}</td>
+                <td>
+                    <button onclick="showFileChanges('${commit.hash}')">View Changes</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    function renderCommitsTable(commits) {
+        const container = document.getElementById('commitsTable');
+        
+        // Create table
+        const table = document.createElement('table');
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Commit ID</th>
+                    <th>Author</th>
+                    <th>Date</th>
+                    <th>Message</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        `;
+        
+        // Add rows
+        const tbody = table.querySelector('tbody');
+        commits.forEach(commit => {
+            const row = document.createElement('tr');
+            
+            // Format the date
+            const date = new Date(commit.timestamp);
+            const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+            
+            row.innerHTML = `
+                <td>${commit.hash.substring(0, 7)}</td>
+                <td>${commit.author}</td>
+                <td>${formattedDate}</td>
+                <td>${commit.message}</td>
+                <td>
+                    <button onclick="showFileChanges('${commit.hash}')">View Changes</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        container.appendChild(table);
+    }
+    
+    function renderFileChangeTypes(changeTypes) {
+        const container = document.getElementById('fileChangeTypes');
+        
+        // Create SVG for pie chart
+        const width = 300;
+        const height = 300;
+        const radius = Math.min(width, height) / 2;
+        
+        const svg = d3.select(container)
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", `translate(${width / 2}, ${height / 2})`);
+            
+        // Create color scale
+        const color = d3.scaleOrdinal()
+            .domain(changeTypes.map(d => d.status))
+            .range(d3.schemeCategory10);
+            
+        // Map status codes to readable names
+        const statusNames = {
+            'A': 'Added',
+            'M': 'Modified',
+            'D': 'Deleted',
+            'R': 'Renamed',
+            'C': 'Copied',
+            'T': 'Type Changed'
+        };
+        
+        // Format the data for pie chart
+        const data = changeTypes.map(d => ({
+            status: statusNames[d.status] || d.status,
+            count: d.change_count
+        }));
+            
+        // Create pie chart
+        const pie = d3.pie()
+            .value(d => d.count);
+            
+        const data_ready = pie(data);
+            
+        // Build arcs
+        const arcGenerator = d3.arc()
+            .innerRadius(0)
+            .outerRadius(radius);
+            
+        // Add tooltip
+        const tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0)
+            .style("position", "absolute")
+            .style("background-color", "white")
+            .style("border", "1px solid #ddd")
+            .style("padding", "10px")
+            .style("border-radius", "4px")
+            .style("pointer-events", "none");
+            
+        // Add slices
+        svg.selectAll('slices')
+            .data(data_ready)
+            .enter()
+            .append('path')
+            .attr('d', arcGenerator)
+            .attr('fill', d => color(d.data.status))
+            .attr('stroke', 'white')
+            .style('stroke-width', '2px')
+            .on('mouseover', function(event, d) {
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                tooltip.html(`${d.data.status}: ${d.data.count} (${(d.data.count / d3.sum(data, d => d.count) * 100).toFixed(1)}%)`)
+                    .style("left", (event.pageX) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            })
+            .on('mouseout', function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
+            
+        // Add labels
+        svg.selectAll('labels')
+            .data(data_ready)
+            .enter()
+            .append('text')
+            .text(d => d.data.status)
+            .attr('transform', d => `translate(${arcGenerator.centroid(d)})`)
+            .style('text-anchor', 'middle')
+            .style('font-size', '12px')
+            .style('fill', 'white');
+    }
+    
+    function renderFileExtensions(extensions) {
+        const container = document.getElementById('fileExtensions');
+        
+        // Create a bar chart for top 10 extensions
+        const data = extensions.slice(0, 10);
+        
+        const margin = {top: 30, right: 30, bottom: 70, left: 60};
+        const width = 500 - margin.left - margin.right;
+        const height = 400 - margin.top - margin.bottom;
+        
+        // Create SVG
+        const svg = d3.select(container)
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`);
+            
+        // X axis
+        const x = d3.scaleBand()
+            .range([0, width])
+            .domain(data.map(d => d.extension))
+            .padding(0.2);
+        svg.append("g")
+            .attr("transform", `translate(0, ${height})`)
+            .call(d3.axisBottom(x))
+            .selectAll("text")
+            .attr("transform", "translate(-10,0)rotate(-45)")
+            .style("text-anchor", "end");
+            
+        // Y axis
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.count) * 1.1])
+            .range([height, 0]);
+        svg.append("g")
+            .call(d3.axisLeft(y));
+            
+        // Add bars
+        svg.selectAll("bars")
+            .data(data)
+            .enter()
+            .append("rect")
+            .attr("x", d => x(d.extension))
+            .attr("y", d => y(d.count))
+            .attr("width", x.bandwidth())
+            .attr("height", d => height - y(d.count))
+            .attr("fill", "#69b3a2");
+            
+        // Add title
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", -10)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .text("Top 10 File Extensions");
+    }
+    
+    function renderCommitActivity(commitsByDay) {
+        const container = document.getElementById('commitActivity');
+        
+        // Group by date
+        const dateGroups = {};
+        commitsByDay.forEach(item => {
+            if (!dateGroups[item.date]) {
+                dateGroups[item.date] = 0;
+            }
+            dateGroups[item.date] += item.commit_count;
+        });
+        
+        // Convert to array
+        const data = Object.entries(dateGroups)
+            .map(([date, count]) => ({date: new Date(date), count}))
+            .sort((a, b) => a.date - b.date);
+            
+        // Define dimensions
+        const margin = {top: 20, right: 30, bottom: 30, left: 50};
+        const width = 800 - margin.left - margin.right;
+        const height = 300 - margin.top - margin.bottom;
+        
+        // Create SVG
+        const svg = d3.select(container)
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`);
+            
+        // X scale (time)
+        const x = d3.scaleTime()
+            .domain(d3.extent(data, d => d.date))
+            .range([0, width]);
+            
+        // Y scale (linear)
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.count) * 1.1])
+            .range([height, 0]);
+            
+        // Add X axis
+        svg.append("g")
+            .attr("transform", `translate(0, ${height})`)
+            .call(d3.axisBottom(x));
+            
+        // Add Y axis
+        svg.append("g")
+            .call(d3.axisLeft(y));
+            
+        // Add the line
+        svg.append("path")
+            .datum(data)
+            .attr("fill", "none")
+            .attr("stroke", "steelblue")
+            .attr("stroke-width", 1.5)
+            .attr("d", d3.line()
+                .x(d => x(d.date))
+                .y(d => y(d.count))
+            );
+            
+        // Add points
+        svg.selectAll("circle")
+            .data(data)
+            .enter()
+            .append("circle")
+            .attr("cx", d => x(d.date))
+            .attr("cy", d => y(d.count))
+            .attr("r", 5)
+            .attr("fill", "steelblue");
+    }
+    
+    // Function to show file changes for a specific commit
+    function showFileChanges(commitHash) {
+        fetch(`/api/file-changes/${commitHash}`)
+            .then(response => response.json())
+            .then(fileChanges => {
+                // Create a modal to display the changes
+                const modal = document.createElement('div');
+                modal.style.position = 'fixed';
+                modal.style.zIndex = '1000';
+                modal.style.left = '0';
+                modal.style.top = '0';
+                modal.style.width = '100%';
+                modal.style.height = '100%';
+                modal.style.overflow = 'auto';
+                modal.style.backgroundColor = 'rgba(0,0,0,0.4)';
+                
+                // Modal content
+                const modalContent = document.createElement('div');
+                modalContent.style.backgroundColor = '#fefefe';
+                modalContent.style.margin = '10% auto';
+                modalContent.style.padding = '20px';
+                modalContent.style.border = '1px solid #888';
+                modalContent.style.width = '80%';
+                modalContent.style.maxHeight = '70%';
+                modalContent.style.overflow = 'auto';
+                
+                // Close button
+                const closeButton = document.createElement('span');
+                closeButton.innerHTML = '&times;';
+                closeButton.style.color = '#aaa';
+                closeButton.style.float = 'right';
+                closeButton.style.fontSize = '28px';
+                closeButton.style.fontWeight = 'bold';
+                closeButton.style.cursor = 'pointer';
+                closeButton.onclick = function() {
+                    document.body.removeChild(modal);
+                };
+                
+                modalContent.appendChild(closeButton);
+                
+                // Heading
+                const heading = document.createElement('h3');
+                heading.textContent = `File Changes for Commit ${commitHash.substring(0, 7)}`;
+                modalContent.appendChild(heading);
+                
+                // Table of file changes
+                const table = document.createElement('table');
+                table.style.width = '100%';
+                table.style.borderCollapse = 'collapse';
+                
+                // Table header
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr>
+                        <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Status</th>
+                        <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Filename</th>
+                    </tr>
+                `;
+                table.appendChild(thead);
+                
+                // Table body
+                const tbody = document.createElement('tbody');
+                
+                // Map status codes to readable names and colors
+                const statusMap = {
+                    'A': { text: 'Added', color: '#d0f0d0' },
+                    'M': { text: 'Modified', color: '#e0e0f0' },
+                    'D': { text: 'Deleted', color: '#f0d0d0' },
+                    'R': { text: 'Renamed', color: '#f0f0d0' },
+                    'C': { text: 'Copied', color: '#d0f0f0' },
+                    'T': { text: 'Type Changed', color: '#f0d0f0' }
+                };
+                
+                fileChanges.forEach(change => {
+                    const row = document.createElement('tr');
+                    
+                    const statusInfo = statusMap[change.status] || { text: change.status, color: '#ffffff' };
+                    
+                    row.innerHTML = `
+                        <td style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd; background-color: ${statusInfo.color};">
+                            ${statusInfo.text}
+                        </td>
+                        <td style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">
+                            ${change.filename}
+                        </td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+                
+                table.appendChild(tbody);
+                modalContent.appendChild(table);
+                
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+                
+                // Close when clicking outside the modal
+                window.onclick = function(event) {
+                    if (event.target === modal) {
+                        document.body.removeChild(modal);
+                    }
+                };
+            })
+            .catch(error => {
+                console.error('Error fetching file changes:', error);
+                alert('Error loading file changes. Please try again.');
+            });
     }
 </script>
 </body>

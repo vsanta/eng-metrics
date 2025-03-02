@@ -51,6 +51,33 @@ function createTables() {
       PRIMARY KEY (editor, creator, repository, filename, analysis_key)
     );
   `, (err) => { if (err) console.error(err); });
+  
+    // Table for storing raw git log data
+    connection.run(`
+    CREATE SEQUENCE IF NOT EXISTS commit_id_seq;
+    CREATE TABLE IF NOT EXISTS commits (
+      id BIGINT DEFAULT nextval('commit_id_seq') PRIMARY KEY,
+      hash TEXT,
+      author TEXT,
+      timestamp TIMESTAMP,
+      message TEXT,
+      repository TEXT,
+      analysis_key TEXT
+    );
+  `, (err) => { if (err) console.error(err); });
+  
+    // Table for storing file changes in each commit
+    connection.run(`
+    CREATE SEQUENCE IF NOT EXISTS file_change_id_seq;
+    CREATE TABLE IF NOT EXISTS file_changes (
+      id BIGINT DEFAULT nextval('file_change_id_seq') PRIMARY KEY,
+      commit_hash TEXT,
+      status TEXT,
+      filename TEXT,
+      repository TEXT,
+      analysis_key TEXT
+    );
+  `, (err) => { if (err) console.error(err); });
 }
 
 async function getQuery(query, params = []) {

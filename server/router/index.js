@@ -17,6 +17,73 @@ router.get('/network/:analysisKey', async (req, res) => {
     }
 });
 
+// Endpoint to get raw commit data
+router.get('/commits/:analysisKey', async (req, res) => {
+    const { analysisKey } = req.params;
+    try {
+        const query = `
+            SELECT * FROM commits
+            WHERE analysis_key = ?
+            ORDER BY timestamp DESC
+        `;
+        const commits = await db.getQuery(query, [analysisKey]);
+        res.json(commits);
+    } catch (error) {
+        console.error('Error fetching commits:', error);
+        res.status(500).json({ error: error.toString() });
+    }
+});
+
+// Endpoint to get file changes for a specific commit
+router.get('/file-changes/:commitHash', async (req, res) => {
+    const { commitHash } = req.params;
+    try {
+        const query = `
+            SELECT * FROM file_changes
+            WHERE commit_hash = ?
+        `;
+        const fileChanges = await db.getQuery(query, [commitHash]);
+        res.json(fileChanges);
+    } catch (error) {
+        console.error('Error fetching file changes:', error);
+        res.status(500).json({ error: error.toString() });
+    }
+});
+
+// New analytics endpoints
+router.get('/analytics/commits-by-day/:analysisKey', async (req, res) => {
+    const { analysisKey } = req.params;
+    try {
+        const data = await service.getCommitsByDay(analysisKey);
+        res.json(data);
+    } catch (error) {
+        console.error('Error fetching commit analytics:', error);
+        res.status(500).json({ error: error.toString() });
+    }
+});
+
+router.get('/analytics/changes-by-type/:analysisKey', async (req, res) => {
+    const { analysisKey } = req.params;
+    try {
+        const data = await service.getFileChangesByType(analysisKey);
+        res.json(data);
+    } catch (error) {
+        console.error('Error fetching file change analytics:', error);
+        res.status(500).json({ error: error.toString() });
+    }
+});
+
+router.get('/analytics/file-extensions/:analysisKey', async (req, res) => {
+    const { analysisKey } = req.params;
+    try {
+        const data = await service.getFileExtensions(analysisKey);
+        res.json(data);
+    } catch (error) {
+        console.error('Error fetching file extension analytics:', error);
+        res.status(500).json({ error: error.toString() });
+    }
+});
+
 // New endpoint to fetch detailed contributor info
 router.get('/contributor/:author', async (req, res) => {
     const { author } = req.params;

@@ -135,6 +135,75 @@ async function analyzeRepository(repoPath, sinceDate, analysisKey) {
         return { creates: 0, edits: 0 };
     }
 
+    // Get more detailed git log with all the data we want to store
+    // Format: commit hash, author name, timestamp, and commit message
+    const detailedLogOutput = await runCommand(
+        `git log ${sinceOption} --pretty=format:'COMMIT%n%H|%an|%at|%s'`, 
+        repoPath
+    );
+    
+    // Get file changes with commit hash
+    const fileChangesOutput = await runCommand(
+        `git log ${sinceOption} --name-status --pretty=format:'COMMIT %H'`, 
+        repoPath
+    );
+
+    // Parse and store the detailed commit data
+    if (detailedLogOutput) {
+        const detailedLines = detailedLogOutput.split('\n');
+        let currentCommit = null;
+        
+        for (const line of detailedLines.map(l => l.trim()).filter(Boolean)) {
+            if (line === "COMMIT") {
+                currentCommit = null;
+            } else if (line.includes('|')) {
+                const [hash, author, timestamp, message] = line.split('|');
+                currentCommit = hash;
+                
+                // Convert Unix timestamp to ISO datetime
+                const date = new Date(parseInt(timestamp) * 1000);
+                
+                // Insert commit data
+                try {
+                    await db.runQuery(
+                        "INSERT INTO commits (hash, author, timestamp, message, repository, analysis_key) VALUES (?, ?, ?, ?, ?, ?)",
+                        [hash, author, date.toISOString(), message, repoName, analysisKey]
+                    );
+                } catch (error) {
+                    console.error("Error storing commit:", error);
+                }
+            }
+        }
+    }
+    
+    // Parse and store file changes
+    if (fileChangesOutput) {
+        const fileLines = fileChangesOutput.split('\n');
+        let currentCommitHash = null;
+        
+        for (const line of fileLines.map(l => l.trim()).filter(Boolean)) {
+            if (line.startsWith("COMMIT ")) {
+                currentCommitHash = line.substring(7);
+            } else if (currentCommitHash && /^[AMDRT]/.test(line)) {
+                const parts = line.split("\t");
+                if (parts.length < 2) continue;
+                const status = parts[0][0];
+                const filename = parts[parts.length - 1];
+                
+                // Store the file change
+                try {
+                    await db.runQuery(
+                        "INSERT INTO file_changes (commit_hash, status, filename, repository, analysis_key) VALUES (?, ?, ?, ?, ?)",
+                        [currentCommitHash, status, filename, repoName, analysisKey]
+                    );
+                } catch (error) {
+                    console.error("Error storing file change:", error);
+                }
+            }
+        }
+    }
+
+    // Original analysis code for the existing metrics
     output = await runCommand(`git log ${sinceOption} --name-status --pretty=format:'COMMIT%n%H %an'`, repoPath);
     if (!output) {
         console.log(`No data found in repository ${repoName}`);
@@ -365,6 +434,60 @@ async function getCollaborationNetwork(analysisKey) {
     return await db.getQuery(query, [analysisKey]);
 }
 
+// Get commit count per author per day
+async function getCommitsByDay(analysisKey) {
+    const query = `
+    SELECT 
+        author,
+        DATE(timestamp) as date,
+        COUNT(*) as commit_count
+    FROM commits
+    WHERE analysis_key = ?
+    GROUP BY author, DATE(timestamp)
+    ORDER BY date
+    `;
+    
+    return await db.getQuery(query, [analysisKey]);
+}
+
+// Get file changes by type
+async function getFileChangesByType(analysisKey) {
+    const query = `
+    SELECT 
+        status,
+        COUNT(*) as change_count
+    FROM file_changes
+    WHERE analysis_key = ?
+    GROUP BY status
+    `;
+    
+    return await db.getQuery(query, [analysisKey]);
+}
+
+// Get file extensions being modified
+async function getFileExtensions(analysisKey) {
+    const query = `
+    WITH extensions AS (
+        SELECT 
+            CASE 
+                WHEN filename LIKE '%.%' THEN 
+                    SUBSTR(filename, INSTR(filename, '.', -1) + 1) 
+                ELSE 'no-extension'
+            END as extension
+        FROM file_changes
+        WHERE analysis_key = ?
+    )
+    SELECT 
+        extension,
+        COUNT(*) as count
+    FROM extensions
+    GROUP BY extension
+    ORDER BY count DESC
+    `;
+    
+    return await db.getQuery(query, [analysisKey]);
+}
+
 module.exports = {
     analyzeAllRepositories,
     getContributorDetails,
@@ -376,4 +499,7 @@ module.exports = {
     getTopEditedCreators,
     getInfluenceRank,
     getCollaborationNetwork,
+    getCommitsByDay,
+    getFileChangesByType,
+    getFileExtensions,
 };

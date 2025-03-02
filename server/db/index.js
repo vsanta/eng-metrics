@@ -78,6 +78,46 @@ function createTables() {
       analysis_key TEXT
     );
   `, (err) => { if (err) console.error(err); });
+  
+    // Table for storing branch information
+    connection.run(`
+    CREATE SEQUENCE IF NOT EXISTS branch_id_seq;
+    CREATE TABLE IF NOT EXISTS branches (
+      id BIGINT DEFAULT nextval('branch_id_seq') PRIMARY KEY,
+      name TEXT,
+      created_timestamp TIMESTAMP,
+      merged_timestamp TIMESTAMP,
+      created_by TEXT,
+      merged_by TEXT,
+      repository TEXT,
+      analysis_key TEXT
+    );
+  `, (err) => { if (err) console.error(err); });
+  
+    // Table for tracking hot files (files that change frequently)
+    connection.run(`
+    CREATE SEQUENCE IF NOT EXISTS hot_file_id_seq;
+    CREATE TABLE IF NOT EXISTS hot_files (
+      id BIGINT DEFAULT nextval('hot_file_id_seq') PRIMARY KEY,
+      filename TEXT,
+      change_count INTEGER,
+      contributor_count INTEGER,
+      repository TEXT,
+      analysis_key TEXT
+    );
+  `, (err) => { if (err) console.error(err); });
+  
+    // Table for classifying commits by type (feature, bug, refactor)
+    connection.run(`
+    CREATE SEQUENCE IF NOT EXISTS commit_type_id_seq;
+    CREATE TABLE IF NOT EXISTS commit_types (
+      id BIGINT DEFAULT nextval('commit_type_id_seq') PRIMARY KEY, 
+      commit_hash TEXT,
+      type TEXT,
+      confidence FLOAT,
+      analysis_key TEXT
+    );
+  `, (err) => { if (err) console.error(err); });
 }
 
 async function getQuery(query, params = []) {

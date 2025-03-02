@@ -200,6 +200,99 @@ router.get('/analytics/file-extensions/:analysisKey', async (req, res) => {
     }
 });
 
+// PR Lifecycle endpoints
+router.get('/analytics/pr-lifecycle/:analysisKey', async (req, res) => {
+    const { analysisKey } = req.params;
+    try {
+        const data = await service.getPRLifecycle(analysisKey);
+        
+        // Convert any BigInt values to numbers
+        const cleanData = data.map(item => {
+            const cleanItem = {};
+            for (const key in item) {
+                if (typeof item[key] === 'bigint') {
+                    cleanItem[key] = Number(item[key]);
+                } else {
+                    cleanItem[key] = item[key];
+                }
+            }
+            return cleanItem;
+        });
+        
+        // Check if there are any BigInt values left before stringify
+        const stringified = JSON.stringify(cleanData, (key, value) => 
+            typeof value === 'bigint' ? value.toString() : value
+        );
+        
+        res.send(stringified);
+    } catch (error) {
+        console.error('Error fetching PR lifecycle analytics:', error);
+        res.status(500).json({ error: error.toString() });
+    }
+});
+
+// Hot files (most frequently changed files)
+router.get('/analytics/hot-files/:analysisKey', async (req, res) => {
+    const { analysisKey } = req.params;
+    try {
+        const data = await service.getHotFiles(analysisKey);
+        
+        // Convert any BigInt values to numbers
+        const cleanData = data.map(item => {
+            const cleanItem = {};
+            for (const key in item) {
+                if (typeof item[key] === 'bigint') {
+                    cleanItem[key] = Number(item[key]);
+                } else {
+                    cleanItem[key] = item[key];
+                }
+            }
+            return cleanItem;
+        });
+        
+        // Check if there are any BigInt values left before stringify
+        const stringified = JSON.stringify(cleanData, (key, value) => 
+            typeof value === 'bigint' ? value.toString() : value
+        );
+        
+        res.send(stringified);
+    } catch (error) {
+        console.error('Error fetching hot files analytics:', error);
+        res.status(500).json({ error: error.toString() });
+    }
+});
+
+// Commit types by author (feature, bug, etc)
+router.get('/analytics/commit-types/:analysisKey', async (req, res) => {
+    const { analysisKey } = req.params;
+    try {
+        const data = await service.getCommitTypesByAuthor(analysisKey);
+        
+        // Convert any BigInt values to numbers
+        const cleanData = data.map(item => {
+            const cleanItem = {};
+            for (const key in item) {
+                if (typeof item[key] === 'bigint') {
+                    cleanItem[key] = Number(item[key]);
+                } else {
+                    cleanItem[key] = item[key];
+                }
+            }
+            return cleanItem;
+        });
+        
+        // Check if there are any BigInt values left before stringify
+        const stringified = JSON.stringify(cleanData, (key, value) => 
+            typeof value === 'bigint' ? value.toString() : value
+        );
+        
+        res.send(stringified);
+    } catch (error) {
+        console.error('Error fetching commit types analytics:', error);
+        res.status(500).json({ error: error.toString() });
+    }
+});
+
 // New endpoint to fetch detailed contributor info
 router.get('/contributor/:author', async (req, res) => {
     const { author } = req.params;

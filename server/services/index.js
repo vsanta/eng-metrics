@@ -135,6 +135,9 @@ async function analyzeRepository(repoPath, sinceDate, analysisKey) {
         return { creates: 0, edits: 0 };
     }
 
+    // Get branch information
+    await analyzeBranches(repoPath, repoName, sinceDate, analysisKey);
+
     // Get more detailed git log with all the data we want to store
     // Format: commit hash, author name, timestamp, and commit message
     const detailedLogOutput = await runCommand(
@@ -169,6 +172,15 @@ async function analyzeRepository(repoPath, sinceDate, analysisKey) {
                         "INSERT INTO commits (hash, author, timestamp, message, repository, analysis_key) VALUES (?, ?, ?, ?, ?, ?)",
                         [hash, author, date.toISOString(), message, repoName, analysisKey]
                     );
+                    
+                    // Classify commit type based on commit message
+                    const commitType = classifyCommitType(message);
+                    if (commitType.type) {
+                        await db.runQuery(
+                            "INSERT INTO commit_types (commit_hash, type, confidence, analysis_key) VALUES (?, ?, ?, ?)",
+                            [hash, commitType.type, commitType.confidence, analysisKey]
+                        );
+                    }
                 } catch (error) {
                     console.error("Error storing commit:", error);
                 }
@@ -181,6 +193,10 @@ async function analyzeRepository(repoPath, sinceDate, analysisKey) {
         const fileLines = fileChangesOutput.split('\n');
         let currentCommitHash = null;
         
+        // Track file change counts to identify hot files
+        const fileChangeCounts = {};
+        const fileContributors = {};
+        
         for (const line of fileLines.map(l => l.trim()).filter(Boolean)) {
             if (line.startsWith("COMMIT ")) {
                 currentCommitHash = line.substring(7);
@@ -190,17 +206,37 @@ async function analyzeRepository(repoPath, sinceDate, analysisKey) {
                 const status = parts[0][0];
                 const filename = parts[parts.length - 1];
                 
+                // Update hot file tracking
+                if (!fileChangeCounts[filename]) {
+                    fileChangeCounts[filename] = 0;
+                    fileContributors[filename] = new Set();
+                }
+                fileChangeCounts[filename]++;
+                
                 // Store the file change
                 try {
                     await db.runQuery(
                         "INSERT INTO file_changes (commit_hash, status, filename, repository, analysis_key) VALUES (?, ?, ?, ?, ?)",
                         [currentCommitHash, status, filename, repoName, analysisKey]
                     );
+                    
+                    // Get the author of this commit for contributor tracking
+                    const commitInfo = await db.getQuery(
+                        "SELECT author FROM commits WHERE hash = ?",
+                        [currentCommitHash]
+                    );
+                    
+                    if (commitInfo.length > 0) {
+                        fileContributors[filename].add(commitInfo[0].author);
+                    }
                 } catch (error) {
                     console.error("Error storing file change:", error);
                 }
             }
         }
+        
+        // Store hot files information
+        await updateHotFiles(fileChangeCounts, fileContributors, repoName, analysisKey);
     }
 
     // Original analysis code for the existing metrics
@@ -488,6 +524,172 @@ async function getFileExtensions(analysisKey) {
     return await db.getQuery(query, [analysisKey]);
 }
 
+// Analyze branch information (PRs, branch lifecycle)
+async function analyzeBranches(repoPath, repoName, sinceDate, analysisKey) {
+    try {
+        // Get all branches including merged ones
+        const branchesOutput = await runCommand(`git branch -a --format="%(refname) %(committerdate:iso) %(authorname)"`, repoPath);
+        const branches = branchesOutput.split('\n').filter(Boolean);
+        
+        for (const branchLine of branches) {
+            const parts = branchLine.split(' ');
+            if (parts.length < 4) continue;
+            
+            const branchFullName = parts[0];
+            // Skip remote branches and main/master branches
+            if (branchFullName.includes('refs/remotes/') || 
+                branchFullName.includes('/main') || 
+                branchFullName.includes('/master')) {
+                continue;
+            }
+            
+            const branchName = branchFullName.replace('refs/heads/', '');
+            const createdDate = new Date(parts.slice(1, parts.length - 1).join(' '));
+            const creator = parts[parts.length - 1];
+            
+            // Check if the branch was merged
+            const mergeInfo = await runCommand(`git branch --merged master | grep ${branchName}`, repoPath);
+            let mergedDate = null;
+            let mergedBy = null;
+            
+            if (mergeInfo.trim()) {
+                // The branch was merged, get merge commit info
+                const mergeCommitInfo = await runCommand(
+                    `git log -1 --format="%aI,%an" --merges --grep="Merge.*${branchName}"`, 
+                    repoPath
+                );
+                
+                if (mergeCommitInfo.trim()) {
+                    const [mergeDateTime, merger] = mergeCommitInfo.split(',');
+                    mergedDate = new Date(mergeDateTime);
+                    mergedBy = merger;
+                }
+            }
+            
+            // Store branch information
+            await db.runQuery(
+                `INSERT INTO branches (name, created_timestamp, merged_timestamp, created_by, merged_by, repository, analysis_key)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [branchName, createdDate.toISOString(), mergedDate ? mergedDate.toISOString() : null, 
+                 creator, mergedBy, repoName, analysisKey]
+            );
+        }
+    } catch (error) {
+        console.error("Error analyzing branches:", error);
+    }
+}
+
+// Update hot files tracking
+async function updateHotFiles(fileChangeCounts, fileContributors, repoName, analysisKey) {
+    try {
+        // Get top files by change count
+        const topFiles = Object.entries(fileChangeCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 50); // Top 50 files
+            
+        for (const [filename, changeCount] of topFiles) {
+            const contributorCount = fileContributors[filename] ? fileContributors[filename].size : 0;
+            
+            // Store hot file data
+            await db.runQuery(
+                `INSERT INTO hot_files (filename, change_count, contributor_count, repository, analysis_key)
+                 VALUES (?, ?, ?, ?, ?)`,
+                [filename, changeCount, contributorCount, repoName, analysisKey]
+            );
+        }
+    } catch (error) {
+        console.error("Error updating hot files:", error);
+    }
+}
+
+// Classify commit type using heuristics
+function classifyCommitType(message) {
+    message = message.toLowerCase();
+    
+    // Keywords for classification
+    const patterns = {
+        feature: /\b(feature|feat|add|new|implement|support)\b/i,
+        bug: /\b(fix|bug|issue|problem|resolve|crash|error)\b/i,
+        refactor: /\b(refactor|clean|improve|enhance|update|optimiz|reorganiz|restructur)\b/i,
+        docs: /\b(doc|comment|readme|changelog)\b/i,
+        test: /\b(test|spec|assert|validate)\b/i,
+        chore: /\b(chore|bump|version|release|merge|config)\b/i
+    };
+    
+    // Count matches for each category
+    let bestMatch = null;
+    let highestConfidence = 0;
+    
+    for (const [type, regex] of Object.entries(patterns)) {
+        const matches = (message.match(regex) || []).length;
+        
+        if (matches > 0) {
+            const confidence = matches / message.split(' ').length;
+            if (confidence > highestConfidence) {
+                highestConfidence = confidence;
+                bestMatch = type;
+            }
+        }
+    }
+    
+    return {
+        type: bestMatch,
+        confidence: highestConfidence
+    };
+}
+
+// Get PR lifecycle metrics
+async function getPRLifecycle(analysisKey) {
+    const query = `
+    SELECT 
+        name as branch_name,
+        created_by,
+        merged_by,
+        created_timestamp,
+        merged_timestamp,
+        CAST((JULIANDAY(merged_timestamp) - JULIANDAY(created_timestamp)) * 24 * 60 AS INTEGER) as lifetime_minutes
+    FROM branches
+    WHERE analysis_key = ?
+      AND merged_timestamp IS NOT NULL
+    ORDER BY lifetime_minutes DESC
+    `;
+    
+    return await db.getQuery(query, [analysisKey]);
+}
+
+// Get hot files (most frequently changed)
+async function getHotFiles(analysisKey) {
+    const query = `
+    SELECT 
+        filename,
+        CAST(change_count AS INTEGER) as change_count,
+        CAST(contributor_count AS INTEGER) as contributor_count
+    FROM hot_files
+    WHERE analysis_key = ?
+    ORDER BY change_count DESC
+    LIMIT 20
+    `;
+    
+    return await db.getQuery(query, [analysisKey]);
+}
+
+// Get commit types breakdown by author
+async function getCommitTypesByAuthor(analysisKey) {
+    const query = `
+    SELECT 
+        c.author,
+        ct.type,
+        CAST(COUNT(*) AS INTEGER) as count
+    FROM commits c
+    JOIN commit_types ct ON c.hash = ct.commit_hash
+    WHERE c.analysis_key = ?
+    GROUP BY c.author, ct.type
+    ORDER BY c.author, count DESC
+    `;
+    
+    return await db.getQuery(query, [analysisKey]);
+}
+
 module.exports = {
     analyzeAllRepositories,
     getContributorDetails,
@@ -502,4 +704,7 @@ module.exports = {
     getCommitsByDay,
     getFileChangesByType,
     getFileExtensions,
+    getPRLifecycle,
+    getHotFiles,
+    getCommitTypesByAuthor,
 };

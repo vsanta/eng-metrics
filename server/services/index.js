@@ -647,7 +647,7 @@ async function getPRLifecycle(analysisKey) {
         merged_by,
         created_timestamp,
         merged_timestamp,
-        CAST((JULIANDAY(merged_timestamp) - JULIANDAY(created_timestamp)) * 24 * 60 AS INTEGER) as lifetime_minutes
+        CAST((JULIAN(merged_timestamp) - JULIAN(created_timestamp)) * 24 * 60 AS INTEGER) as lifetime_minutes
     FROM branches
     WHERE analysis_key = ?
       AND merged_timestamp IS NOT NULL

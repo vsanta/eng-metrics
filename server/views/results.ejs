@@ -152,6 +152,12 @@
         <p><strong>Edits:</strong> ${details.edits}</p>
         <p><strong>Edits on their files:</strong> ${details.editsToCreations}</p>
         <p><strong>Influence Score:</strong> ${details.influenceScore}</p>
+        <p style="font-size: 0.9em; color: #555;">
+          <em>
+            Influence Score is calculated as: Edits + (Creates × Multiplier), where
+            Multiplier = (Edits on created files > 0 ? Edits on created files : 1)
+          </em>
+        </p>
         <h3>Contributions per Repository</h3>
         ${details.perRepo && details.perRepo.length > 0 ? `
           <ul>

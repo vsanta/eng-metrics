@@ -14,42 +14,49 @@ function initDB(dbFile = ':memory:') {
 }
 
 function createTables() {
-    // Create the repositories table
+    // Repositories table with analysis_key column
     db.run(`
-    CREATE TABLE IF NOT EXISTS repositories (
-      id INTEGER PRIMARY KEY,
-      name TEXT
-    )
-  `);
-    // Create the actions table
+        CREATE TABLE IF NOT EXISTS repositories (
+                                                    id INTEGER PRIMARY KEY,
+                                                    name TEXT,
+                                                    analysis_key TEXT
+        )
+    `);
+
+    // Actions table with analysis_key column
     db.run(`
-    CREATE TABLE IF NOT EXISTS actions (
-      id INTEGER PRIMARY KEY,
-      author TEXT,
-      action TEXT,
-      repository TEXT,
-      filename TEXT
-    )
-  `);
-    // Table for file creators
+        CREATE TABLE IF NOT EXISTS actions (
+                                               id INTEGER PRIMARY KEY,
+                                               author TEXT,
+                                               action TEXT,
+                                               repository TEXT,
+                                               filename TEXT,
+                                               analysis_key TEXT
+        )
+    `);
+
+    // File creators table with analysis_key and composite primary key
     db.run(`
-    CREATE TABLE IF NOT EXISTS file_creators (
-      filename TEXT,
-      repository TEXT,
-      creator TEXT,
-      PRIMARY KEY (filename, repository)
-    )
-  `);
-    // Table for edits to files created by others
+        CREATE TABLE IF NOT EXISTS file_creators (
+                                                     filename TEXT,
+                                                     repository TEXT,
+                                                     creator TEXT,
+                                                     analysis_key TEXT,
+                                                     PRIMARY KEY (filename, repository, analysis_key)
+            )
+    `);
+
+    // Edits to creations table with analysis_key and composite primary key
     db.run(`
-    CREATE TABLE IF NOT EXISTS edits_to_creations (
-      editor TEXT,
-      creator TEXT,
-      repository TEXT,
-      filename TEXT,
-      PRIMARY KEY (editor, creator, repository, filename)
-    )
-  `);
+        CREATE TABLE IF NOT EXISTS edits_to_creations (
+                                                          editor TEXT,
+                                                          creator TEXT,
+                                                          repository TEXT,
+                                                          filename TEXT,
+                                                          analysis_key TEXT,
+                                                          PRIMARY KEY (editor, creator, repository, filename, analysis_key)
+            )
+    `);
 }
 
 function runQuery(query, params = []) {
@@ -69,13 +76,10 @@ function getQuery(query, params = []) {
         });
     });
 }
-function healthcheck() {
-    return getQuery("SELECT 1");
-}
+
 module.exports = {
     initDB,
     runQuery,
     getQuery,
-    healthcheck,
-    db, // export the raw db if needed
+    db, // export raw db if needed
 };

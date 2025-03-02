@@ -6,6 +6,7 @@
     <!-- Include D3.js -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
+        /* Basic styling for the scatter plot and tooltip */
         #tooltip {
             position: absolute;
             display: none;
@@ -13,6 +14,31 @@
             background-color: lightgray;
             border: 1px solid #333;
             border-radius: 4px;
+        }
+        /* Side panel styling */
+        #sidePanel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 350px;
+            height: 100%;
+            background: #f7f7f7;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+            padding: 20px;
+            overflow-y: auto;
+            transition: right 0.3s ease;
+        }
+        #sidePanel.open {
+            right: 0;
+        }
+        #sidePanel h2 {
+            margin-top: 0;
+        }
+        #closePanel {
+            cursor: pointer;
+            float: right;
+            font-size: 18px;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -22,26 +48,34 @@
 <p>Total Edits: <%= result.totalEdits %></p>
 <p>Since Date: <%= result.sinceDate %></p>
 
+<!-- Store the analysis key so it can be used by the front end -->
+<script>
+    const analysisKey = "<%= result.analysisKey %>";
+</script>
+
 <!-- Container for the scatter plot -->
 <div id="scatterPlot"></div>
 <div id="tooltip"></div>
 
+<!-- Side panel for detailed contributor info -->
+<div id="sidePanel">
+    <span id="closePanel">&times;</span>
+    <div id="panelContent"></div>
+</div>
+
 <script>
-    // Parse the contributor data passed from the server.
-    // The service is expected to return an array of contributor objects.
+    // Data injected from the server: an array of contributor objects.
     const dataPoints = <%- JSON.stringify(result.contributors || []) %>;
 
-    // Define dimensions and margins
     const width = 600, height = 400;
     const margin = { top: 50, right: 50, bottom: 50, left: 50 };
 
-    // Create the SVG element
     const svg = d3.select("#scatterPlot")
         .append("svg")
         .attr("width", width)
         .attr("height", height);
 
-    // Create scales (flip axes so x-axis represents file creations)
+    // Scales: x for creates, y for edits.
     const xScale = d3.scaleLinear()
         .domain([0, d3.max(dataPoints, d => d.creates) + 5])
         .range([margin.left, width - margin.right]);
@@ -50,7 +84,7 @@
         .domain([0, d3.max(dataPoints, d => d.edits) + 5])
         .range([height - margin.bottom, margin.top]);
 
-    // Add x-axis (file creations)
+    // X-axis (File Creations)
     const xAxis = d3.axisBottom(xScale);
     svg.append("g")
         .attr("transform", `translate(0, ${height - margin.bottom})`)
@@ -62,7 +96,7 @@
         .style("text-anchor", "end")
         .text("File Creations");
 
-    // Add y-axis (file edits)
+    // Y-axis (File Edits)
     const yAxis = d3.axisLeft(yScale);
     svg.append("g")
         .attr("transform", `translate(${margin.left}, 0)`)
@@ -75,10 +109,10 @@
         .style("text-anchor", "end")
         .text("File Edits");
 
-    // Tooltip selection
+    // Tooltip for hover effect
     const tooltip = d3.select("#tooltip");
 
-    // Plot data points
+    // Plot data points with click handler to load contributor details
     svg.selectAll("circle")
         .data(dataPoints)
         .enter()
@@ -95,7 +129,43 @@
         })
         .on("mouseout", () => {
             tooltip.style("display", "none");
+        })
+        .on("click", function(event, d) {
+            // Include the analysisKey in the query parameter
+            fetch(`/api/contributor/${encodeURIComponent(d.author)}?analysisKey=${encodeURIComponent(analysisKey)}`)
+                .then(response => response.json())
+                .then(details => {
+                    showSidePanel(details);
+                })
+                .catch(err => {
+                    console.error('Error fetching contributor details:', err);
+                });
         });
+
+    // Function to show side panel with contributor details
+    function showSidePanel(details) {
+        const panel = document.getElementById('sidePanel');
+        const panelContent = document.getElementById('panelContent');
+        panelContent.innerHTML = `
+        <h2>${details.author}</h2>
+        <p><strong>Creates:</strong> ${details.creates}</p>
+        <p><strong>Edits:</strong> ${details.edits}</p>
+        <p><strong>Edits on their files:</strong> ${details.editsToCreations}</p>
+        <p><strong>Influence Score:</strong> ${details.influenceScore}</p>
+        <h3>Contributions per Repository</h3>
+        ${details.perRepo && details.perRepo.length > 0 ? `
+          <ul>
+            ${details.perRepo.map(repo => `<li>${repo.repository}: ${repo.creates} creates, ${repo.edits} edits</li>`).join('')}
+          </ul>
+        ` : '<p>No per-repository data available.</p>'}
+      `;
+        panel.classList.add('open');
+    }
+
+    // Function to hide the side panel
+    document.getElementById('closePanel').addEventListener('click', () => {
+        document.getElementById('sidePanel').classList.remove('open');
+    });
 </script>
 </body>
 </html>

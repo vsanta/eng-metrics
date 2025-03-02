@@ -15,6 +15,8 @@ router.get('/contributor/:author', async (req, res) => {
     }
     try {
         const details = await service.getContributorDetails(author, analysisKey);
+        const influenceRank = await service.getInfluenceRank(author, analysisKey);
+        details['influenceRank'] = Number(influenceRank);
         res.json(details);
     } catch (error) {
         console.error('Error fetching contributor details:', error);
@@ -33,14 +35,23 @@ router.post('/analyze', async (req, res) => {
         // Convert BigInts to Numbers in your contributors array and other numeric fields
         const cleanContributors = convertBigInts(contributors);
 
-        const result = {
-            totalCreates: Number(analysis.totalCreates),
-            totalEdits: Number(analysis.totalEdits),
+        const topInfluencers = await service.getTopInfluencers(analysis.analysisKey);
+
+        const topCreators = await service.getTopCreators(analysis.analysisKey);
+        const topEditors = await service.getTopEditors(analysis.analysisKey);
+        const topEditedCreators = await service.getTopEditedCreators(analysis.analysisKey);
+
+        res.render('results', {
+            totalCreates: analysis.totalCreates,
+            totalEdits: analysis.totalEdits,
             sinceDate: analysis.sinceDate,
             analysisKey: analysis.analysisKey,
-            contributors: cleanContributors,
-        };
-        res.render('results', { result });
+            contributors:cleanContributors,
+            topInfluencers: topInfluencers,
+            topCreators:topCreators,
+            topEditors: topEditors,
+            topEditedCreators: topEditedCreators
+        });
     } catch (error) {
         console.error('Error during analysis:', error);
         res.status(500).send('Error performing analysis: ' + error.toString());

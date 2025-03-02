@@ -10,8 +10,6 @@ function runCommand(cmd, cwd) {
     return new Promise((resolve, reject) => {
         exec(cmd, { cwd, shell: true,  maxBuffer: 1024 * 1024 * 10  }, (error, stdout, stderr) => {
             if (error) {
-                console.error(`Error running command: ${cmd} on ${cwd}\n`, stderr);
-                console.log(error);
                 return resolve(''); // return empty string on error
             }
             resolve(stdout);
@@ -40,7 +38,6 @@ function findRepositories(startDir) {
 }
 
 async function getContributorDetails(author, analysisKey) {
-    console.log("getContributorDetails called with:", { author, analysisKey });
     const summaryQuery = `
         SELECT
             COALESCE(CAST(SUM(CASE WHEN action = 'create' THEN 1 ELSE 0 END) AS INTEGER), 0) AS creates,
@@ -115,7 +112,6 @@ async function analyzeRepository(repoPath, sinceDate, analysisKey) {
         [repoName, analysisKey]
     );
     if (existingRepo.length === 0) {
-        console.log(`Inserting repository record: ${repoName}, key: ${analysisKey}`);
         await db.runQuery(
             "INSERT INTO repositories (name, analysis_key) VALUES (?, ?)",
             [repoName, analysisKey]
@@ -208,7 +204,31 @@ async function analyzeRepository(repoPath, sinceDate, analysisKey) {
     return { creates: stats.create || 0, edits: stats.edit || 0 };
 }
 
-// In service.js (or a separate module if preferred)
+async function getTopInfluencers(analysisKey) {
+    const query = `
+    SELECT author,
+           total_edits,
+           total_creates,
+           times_edited_on_created_files,
+           total_edits + (total_creates * (CASE WHEN times_edited_on_created_files > 0 THEN times_edited_on_created_files ELSE 1 END)) AS influenceScore
+    FROM (
+      SELECT a.author,
+             COALESCE(CAST(SUM(CASE WHEN a.action = 'create' THEN 1 ELSE 0 END) AS INTEGER)) AS total_creates,
+             COALESCE(CAST(SUM(CASE WHEN a.action = 'edit' THEN 1 ELSE 0 END) AS INTEGER)) AS total_edits,
+             COALESCE((
+               SELECT COUNT(*)
+               FROM edits_to_creations etc
+               WHERE etc.creator = a.author AND etc.analysis_key = ?
+             ), 0) AS times_edited_on_created_files
+      FROM actions a
+      WHERE a.analysis_key = ?
+      GROUP BY a.author
+    ) sub
+    ORDER BY influenceScore DESC
+    LIMIT 20;
+  `;
+    return await db.getQuery(query, [analysisKey, analysisKey]);
+}
 
 
 async function getContributors(analysisKey) {
@@ -242,12 +262,98 @@ function generateAnalysisKey(localPath, years) {
         .update(`${localPath}-${years}-${Date.now()}`)
         .digest('hex');
 }
+async function getTopCreators(analysisKey) {
+    const query = `
+    SELECT author,
+           COALESCE(CAST(SUM(CASE WHEN action = 'create' THEN 1 ELSE 0 END) AS INTEGER))AS creates
+    FROM actions
+    WHERE analysis_key = ?
+    GROUP BY author
+    ORDER BY creates DESC
+    LIMIT 20;
+  `;
+    return await db.getQuery(query, [analysisKey]);
+}
 
+async function getTopEditors(analysisKey) {
+    const query = `
+    SELECT author,
+           COALESCE(CAST(SUM(CASE WHEN action = 'edit' THEN 1 ELSE 0 END) AS INTEGER) )AS edits
+    FROM actions
+    WHERE analysis_key = ?
+    GROUP BY author
+    ORDER BY edits DESC
+    LIMIT 20;
+  `;
+    return await db.getQuery(query, [analysisKey]);
+}
+async function getTopEditedCreators(analysisKey) {
+    const query = `
+    SELECT fc.creator AS author,
+           COUNT(*) AS times_edited
+    FROM file_creators fc
+    JOIN edits_to_creations etc
+      ON fc.filename = etc.filename
+      AND fc.repository = etc.repository
+      AND fc.analysis_key = etc.analysis_key
+    WHERE fc.analysis_key = ?
+    GROUP BY fc.creator
+    ORDER BY times_edited DESC
+    LIMIT 20;
+  `;
+    return await db.getQuery(query, [analysisKey]);
+}
+async function getInfluenceRank(author, analysisKey) {
+    const query = `
+    WITH influencer_scores AS (
+      SELECT 
+        a.author,
+        COALESCE(CAST(SUM(CASE WHEN a.action = 'create' THEN 1 ELSE 0 END) AS INTEGER)) AS creates,
+        COALESCE(CAST(SUM(CASE WHEN a.action = 'edit' THEN 1 ELSE 0 END) AS INTEGER)) AS edits,
+        COALESCE((
+          SELECT COUNT(*) 
+          FROM edits_to_creations etc 
+          WHERE etc.creator = a.author AND etc.analysis_key = ?
+        ), 0) AS times_edited,
+        RANK() OVER (
+          ORDER BY 
+            COALESCE(CAST(SUM(CASE WHEN a.action = 'edit' THEN 1 ELSE 0 END) AS INTEGER))
+            + COALESCE(CAST(SUM(CASE WHEN a.action = 'create' THEN 1 ELSE 0 END) AS INTEGER)) *
+              (CASE WHEN COALESCE((
+                 SELECT COUNT(*) 
+                 FROM edits_to_creations etc 
+                 WHERE etc.creator = a.author AND etc.analysis_key = ?
+               ), 0) > 0 THEN COALESCE((
+                 SELECT COUNT(*) 
+                 FROM edits_to_creations etc 
+                 WHERE etc.creator = a.author AND etc.analysis_key = ?
+               ), 0) ELSE 1 END)
+          DESC
+        ) AS influence_rank
+      FROM actions a
+      WHERE a.analysis_key = ?
+      GROUP BY a.author
+    )
+    SELECT influence_rank 
+    FROM influencer_scores 
+    WHERE author = ?;
+  `;
+    // Pass analysisKey three times for the subquery and once for the outer query, then the author.
+    const params = [analysisKey, analysisKey, analysisKey, analysisKey, author];
+    const rows = await db.getQuery(query, params);
+    if (rows.length > 0) return rows[0].influence_rank;
+    return null;
+}
 module.exports = {
     analyzeAllRepositories,
-    getContributors,
     getContributorDetails,
-    findRepositories,
     analyzeRepository,
-    runCommand,
+    getTopInfluencers,
+    getTopInfluencers,
+    getContributors,
+    getTopInfluencers,
+    getTopCreators,
+    getTopEditors,
+    getTopEditedCreators,
+    getInfluenceRank,
 };

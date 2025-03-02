@@ -44,19 +44,60 @@
 </head>
 <body>
 <h1>Analysis Complete</h1>
-<p>Total Creates: <%= result.totalCreates %></p>
-<p>Total Edits: <%= result.totalEdits %></p>
-<p>Since Date: <%= result.sinceDate %></p>
+<p>Total Creates: <%= totalCreates %></p>
+<p>Total Edits: <%= totalEdits %></p>
+<p>Since Date: <%= sinceDate %></p>
 
 <!-- Store the analysis key so it can be used by the front end -->
 <script>
-    const analysisKey = "<%= result.analysisKey %>";
+    const analysisKey = "<%= analysisKey %>";
 </script>
 
 <!-- Container for the scatter plot -->
 <div id="scatterPlot"></div>
 <div id="tooltip"></div>
 
+<!-- Top 20 Influencers -->
+<h2>Top 20 Influencers</h2>
+<ul>
+    <% topInfluencers.forEach(influencer => { %>
+        <li>
+            <strong><%= influencer.author %></strong> – Influence Score: <%= influencer.influenceScore %>
+            (Creates: <%= influencer.total_creates %>, Edits: <%= influencer.total_edits %>,
+            Edited on Created Files: <%= influencer.times_edited_on_created_files %>)
+        </li>
+    <% }); %>
+</ul>
+
+<!-- Top 20 Creators -->
+<h2>Top 20 Creators</h2>
+<ul>
+    <% topCreators.forEach(creator => { %>
+        <li>
+            <strong><%= creator.author %></strong> – Creates: <%= creator.creates %>
+        </li>
+    <% }); %>
+</ul>
+
+<!-- Top 20 Editors -->
+<h2>Top 20 Editors</h2>
+<ul>
+    <% topEditors.forEach(editor => { %>
+        <li>
+            <strong><%= editor.author %></strong> – Edits: <%= editor.edits %>
+        </li>
+    <% }); %>
+</ul>
+
+<!-- Top 20 People Who Create Files That Get Edited -->
+<h2>Top 20 People Whose Files Get Edited</h2>
+<ul>
+    <% topEditedCreators.forEach(item => { %>
+        <li>
+            <strong><%= item.author %></strong> – Times Edited: <%= item.times_edited %>
+        </li>
+    <% }); %>
+</ul>
 <!-- Side panel for detailed contributor info -->
 <div id="sidePanel">
     <span id="closePanel">&times;</span>
@@ -65,7 +106,7 @@
 
 <script>
     // Data injected from the server: an array of contributor objects.
-    const dataPoints = <%- JSON.stringify(result.contributors || []) %>;
+    const dataPoints = <%- JSON.stringify(contributors || []) %>;
 
     const width = 600, height = 400;
     const margin = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -147,7 +188,7 @@
         const panel = document.getElementById('sidePanel');
         const panelContent = document.getElementById('panelContent');
         panelContent.innerHTML = `
-        <h2>${details.author}</h2>
+        <h2>${details.influenceRank} ${details.author}</h2>
         <p><strong>Creates:</strong> ${details.creates}</p>
         <p><strong>Edits:</strong> ${details.edits}</p>
         <p><strong>Edits on their files:</strong> ${details.editsToCreations}</p>

@@ -81,37 +81,35 @@
             pointer-events: none;
             z-index: 100;
         }
-        /* Side panel styling */
-        #sidePanel {
-            position: fixed;
-            top: 0;
-            right: -400px;
-            width: 380px;
-            height: 100%;
-            background: white;
-            box-shadow: -2px 0 10px rgba(0,0,0,0.2);
-            padding: 20px;
-            overflow-y: auto;
-            transition: right 0.3s ease;
-            z-index: 1000;
+        /* Dropdown styling */
+        .dropdown-container {
+            position: relative;
+            margin-right: 15px;
         }
-        #sidePanel.open {
-            right: 0;
-        }
-        #sidePanel h2 {
-            margin-top: 0;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
-        }
-        #closePanel {
+        .contributor-dropdown {
+            min-width: 220px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: #fff;
             cursor: pointer;
-            float: right;
-            font-size: 20px;
-            font-weight: bold;
-            color: #888;
         }
-        #closePanel:hover {
-            color: #333;
+        .contributor-dropdown:focus {
+            outline: none;
+            border-color: #2196F3;
+            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+        }
+        
+        /* Highlighted elements */
+        .highlighted {
+            stroke: #ff6600 !important;
+            stroke-width: 3px !important;
+            fill-opacity: 1 !important;
+        }
+        .highlight-row {
+            background-color: #fff3e0 !important;
+            font-weight: bold;
         }
         
         /* Chart styling */
@@ -119,6 +117,180 @@
             width: 100%;
             height: 100%;
             min-height: 300px;
+        }
+        
+        /* Settings button and modal styling */
+        .settings-button {
+            display: inline-flex;
+            align-items: center;
+            background-color: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-right: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .settings-button svg {
+            margin-right: 6px;
+        }
+        
+        .settings-button:hover {
+            background-color: #e0e0e0;
+        }
+        
+        /* Filter badge to show active filters */
+        .filter-badge {
+            display: none;
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #f44336;
+            color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+            line-height: 16px;
+            text-align: center;
+        }
+        
+        /* Filter modal */
+        .filter-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .filter-modal-content {
+            position: relative;
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            width: 80%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            color: #aaa;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+        }
+        
+        .filter-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .filter-section h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .filter-input-group {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .filter-input-group input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 8px;
+        }
+        
+        .filter-input-group button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        
+        .filter-input-group button:hover {
+            background-color: #0b7dda;
+        }
+        
+        .filter-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f5f5f5;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+        
+        .filter-item button {
+            background-color: transparent;
+            color: #f44336;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .filter-actions {
+            margin-top: 20px;
+            text-align: right;
+        }
+        
+        .filter-actions button {
+            padding: 8px 16px;
+            margin-left: 10px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .save-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .save-btn:hover {
+            background-color: #3e8e41;
+        }
+        
+        .reset-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .reset-btn:hover {
+            background-color: #d32f2f;
+        }
+        
+        .cancel-btn {
+            background-color: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd !important;
+        }
+        
+        .cancel-btn:hover {
+            background-color: #e0e0e0;
         }
         
         /* Collaboration network styling */
@@ -167,9 +339,52 @@
             padding: 10px;
             border-bottom: 1px solid #eee;
             cursor: pointer;
+            transition: background-color 0.2s;
         }
         .contributor-list li:hover {
+            background-color: #f0f7ff;
+        }
+        
+        /* Contributor tabs styling */
+        .contributor-tabcontent {
+            display: none;
+            padding: 15px 0;
+        }
+        .contributor-tabcontent.active {
+            display: block;
+        }
+        
+        /* Contributor search styling */
+        .search-container {
+            position: relative;
+        }
+        .search-container input {
+            padding-left: 30px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>');
+            background-repeat: no-repeat;
+            background-position: 8px center;
+        }
+        
+        /* Pagination styling */
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .pagination-controls button {
+            padding: 5px 10px;
             background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .pagination-controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .pagination-controls button:hover:not(:disabled) {
+            background-color: #e0e0e0;
         }
         
         /* Tabs for Raw Data */
@@ -225,6 +440,19 @@
             </p>
         </div>
         <div class="header-actions">
+            <div class="dropdown-container">
+                <select id="contributorFilter" class="contributor-dropdown">
+                    <option value="">All Contributors</option>
+                    <!-- Contributor options will be populated via JavaScript -->
+                </select>
+            </div>
+            <button id="settingsButton" class="settings-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                Filter Settings
+            </button>
             <a href="/" class="back-link">Back to Dashboard</a>
         </div>
     </header>
@@ -234,58 +462,15 @@
         const analysisKey = "<%= analysisKey %>";
     </script>
     
-    <!-- Top metrics section -->
+    <!-- Contributors section -->
     <div class="metrics-grid">
         <!-- Contributor Overview Card -->
         <div class="card">
-            <h2>Contributor Overview</h2>
+            <h2>Creates and Edits Overview</h2>
             <div id="contributorScatterPlot" class="chart-container"></div>
             <div id="tooltip"></div>
         </div>
         
-        <!-- File Activity Card -->
-        <div class="card">
-            <h2>File Activity</h2>
-            <div class="chart-container">
-                <div id="fileChangeTypes" style="height: 300px;"></div>
-            </div>
-        </div>
-        
-        <!-- PR Timeline Card -->
-        <div class="card metrics-full">
-            <h2>PR Timeline</h2>
-            <div class="chart-container">
-                <div id="prTimeByMonth"></div>
-            </div>
-        </div>
-        
-        <!-- Collaboration Network Card -->
-        <div class="card metrics-full">
-            <h2>Collaboration Network</h2>
-            <p>This graph shows how developers collaborate. Each link represents one developer editing files created by another.</p>
-            <div id="networkGraph"></div>
-        </div>
-    </div>
-    
-    <!-- Contributor Metrics -->
-    <div class="metrics-grid">
-        <!-- Top Contributors Card -->
-        <div class="card">
-            <h2>Contributors by Influence</h2>
-            <p>Influence score combines creating files that others modify with editing activity.</p>
-            <ul class="contributor-list">
-                <% topInfluencers.slice(0, 10).forEach(influencer => { %>
-                    <li onclick="fetchContributorDetails('<%= influencer.author %>')">
-                        <strong><%= influencer.author %></strong> – Score: <%= influencer.influenceScore %>
-                        <div style="font-size: 0.9em; color: #666;">
-                            Creates: <%= influencer.total_creates %>, 
-                            Edits: <%= influencer.total_edits %>,
-                            Edits on creations: <%= influencer.times_edited_on_created_files %>
-                        </div>
-                    </li>
-                <% }); %>
-            </ul>
-        </div>
         
         <!-- Work Type by Contributor Card -->
         <div class="card">
@@ -296,11 +481,37 @@
             </div>
         </div>
         
+        <!-- Collaboration Network Card (only shown if data exists) -->
+        <div id="collaborationNetworkCard" class="card metrics-full" style="display: <%= networkData && networkData.length > 0 ? 'block' : 'none' %>;">
+            <h2>Collaboration Network</h2>
+            <p>This graph shows how developers collaborate. Each link represents one developer editing files created by another.</p>
+            <div id="networkGraph"></div>
+        </div>
+    </div>
+    
+    <!-- Repository and PR metrics section -->
+    <div class="metrics-grid">
+        <!-- File Activity Card -->
+        <div class="card">
+            <h2>File Activity</h2>
+            <div class="chart-container">
+                <div id="fileChangeTypes" style="height: 300px;"></div>
+            </div>
+        </div>
+        
         <!-- Commit Activity Card -->
         <div class="card">
             <h2>Commit Activity</h2>
             <div class="chart-container">
                 <div id="commitActivity"></div>
+            </div>
+        </div>
+        
+        <!-- PR Timeline Card -->
+        <div class="card metrics-full">
+            <h2>PR Timeline</h2>
+            <div class="chart-container">
+                <div id="prTimeByMonth"></div>
             </div>
         </div>
         
@@ -343,22 +554,284 @@
     </div>
 </div>
 
-<!-- Side panel for detailed contributor info -->
-<div id="sidePanel">
-    <span id="closePanel">&times;</span>
-    <div id="panelContent"></div>
+<!-- No side panel anymore - we're using highlighting instead -->
+
+<!-- Filter Settings Modal -->
+<div id="filterModal" class="filter-modal">
+    <div class="filter-modal-content">
+        <span class="modal-close">&times;</span>
+        <h2>Filter Settings</h2>
+        <p>Define filters to exclude specific contributors or files from the analysis. These filters don't delete data, but hide it from the visualizations.</p>
+        
+        <!-- Contributor Filters -->
+        <div class="filter-section">
+            <h3>Filter Contributors</h3>
+            <p>Exclude certain contributors (e.g., bots like "dependabot"):</p>
+            <div class="filter-input-group">
+                <input type="text" id="contributorFilterInput" placeholder="Enter contributor name">
+                <button id="addContributorFilter">Add</button>
+            </div>
+            <div id="contributorFilterList">
+                <!-- Filter items will be added here -->
+            </div>
+            <div id="suggestedContributors" style="margin-top: 10px;">
+                <strong>Suggested:</strong>
+                <button class="suggested-contributor" data-name="dependabot">dependabot</button>
+                <button class="suggested-contributor" data-name="renovate">renovate</button>
+                <button class="suggested-contributor" data-name="github-actions">github-actions</button>
+            </div>
+        </div>
+        
+        <!-- File Path Filters -->
+        <div class="filter-section">
+            <h3>Filter Files</h3>
+            <p>Exclude files by path pattern (e.g., "package-lock.json"):</p>
+            <div class="filter-input-group">
+                <input type="text" id="fileFilterInput" placeholder="Enter file path or pattern">
+                <button id="addFileFilter">Add</button>
+            </div>
+            <div id="fileFilterList">
+                <!-- Filter items will be added here -->
+            </div>
+            <div id="suggestedFiles" style="margin-top: 10px;">
+                <strong>Suggested:</strong>
+                <button class="suggested-file" data-path="package">package</button>
+                <button class="suggested-file" data-path="node_modules/">node_modules/</button>
+                <button class="suggested-file" data-path="dist/">dist/</button>
+                <button class="suggested-file" data-path=".min.js">.min.js</button>
+            </div>
+        </div>
+        
+        <div class="filter-actions">
+            <button id="resetFilters" class="reset-btn">Reset All</button>
+            <button id="applyFilters" class="save-btn">Apply Filters</button>
+            <button id="cancelFilters" class="cancel-btn">Cancel</button>
+        </div>
+    </div>
 </div>
 
 <script>
-    // Function for fetching contributor details
-    function fetchContributorDetails(author) {
-        fetch(`/api/contributor/${encodeURIComponent(author)}?analysisKey=${encodeURIComponent(analysisKey)}`)
-            .then(response => response.json())
-            .then(details => {
-                showSidePanel(details);
+    // Function to highlight a contributor across all visualizations
+    function highlightContributor(author) {
+        // Remove existing highlights
+        clearHighlights();
+        
+        if (!author) {
+            return; // No author selected, just clear highlights
+        }
+        
+        // Highlight in scatter plot
+        d3.selectAll(".dot")
+            .filter(d => d.author === author)
+            .classed("highlighted", true);
+        
+        // Highlight in network graph
+        d3.selectAll(".node circle")
+            .filter(d => d.id === author)
+            .classed("highlighted", true);
+        
+        // Highlight in commit types chart
+        d3.selectAll(".bar-section")
+            .filter(d => d.data && d.data.author === author)
+            .classed("highlighted", true);
+        
+        // Highlight in commit activity chart
+        d3.selectAll(".commit-point")
+            .filter(function(d) {
+                // Check if this point has commits by the selected author
+                return d.authorBreakdown && d.authorBreakdown[author] && d.authorBreakdown[author] > 0;
             })
-            .catch(err => {
-                console.error('Error fetching contributor details:', err);
+            .classed("highlighted", true);
+        
+        // Highlight in PR Timeline chart
+        d3.selectAll("rect.pr-month-bar")
+            .filter(function(d) {
+                return d.authorPRs && d.authorPRs[author] && d.authorPRs[author] > 0;
+            })
+            .classed("highlighted", true);
+        
+        // Highlight in PR details
+        d3.selectAll(".pr-item")
+            .filter(function() {
+                const createdBy = this.getAttribute("data-created-by");
+                const mergedBy = this.getAttribute("data-merged-by");
+                return createdBy === author || mergedBy === author;
+            })
+            .classed("highlight-row", true);
+        
+        // Highlight in tables
+        const tableRows = document.querySelectorAll("tbody tr");
+        tableRows.forEach(row => {
+            const authorCell = row.querySelector("td:nth-child(2)");
+            if (authorCell && authorCell.textContent.trim() === author) {
+                row.classList.add("highlight-row");
+            }
+        });
+        
+        // Highlight in contributor list
+        document.querySelectorAll(".contributor-item").forEach(item => {
+            if (item.getAttribute("data-author") === author) {
+                item.classList.add("highlight-row");
+            }
+        });
+        
+        // Create a second file activity chart for the selected contributor
+        renderFileActivityForContributor(author);
+    }
+    
+    // Function to clear all highlights
+    function clearHighlights() {
+        d3.selectAll(".highlighted").classed("highlighted", false);
+        document.querySelectorAll(".highlight-row").forEach(el => {
+            el.classList.remove("highlight-row");
+        });
+        
+        // Remove the contributor-specific file activity chart if it exists
+        const contributorFileActivity = document.getElementById('contributorFileActivity');
+        if (contributorFileActivity) {
+            contributorFileActivity.remove();
+        }
+    }
+    
+    // Function to render a second file activity chart for a specific contributor
+    function renderFileActivityForContributor(author) {
+        // Check if we have file activity data
+        if (!filteredData.fileChangeTypes) {
+            return;
+        }
+        
+        // Get the container
+        const mainContainer = document.getElementById('fileChangeTypes').parentElement;
+        
+        // First, remove any existing contributor-specific chart to avoid duplicates
+        const existingContributorChart = document.getElementById('contributorFileActivity');
+        if (existingContributorChart) {
+            existingContributorChart.remove();
+        }
+        
+        // Create a new container for the contributor-specific chart
+        const contributorContainer = document.createElement('div');
+        contributorContainer.id = 'contributorFileActivity';
+        contributorContainer.style.marginTop = '20px';
+        contributorContainer.style.borderTop = '1px solid #eee';
+        contributorContainer.style.paddingTop = '15px';
+        
+        // Add title
+        const title = document.createElement('h3');
+        title.textContent = `${author}'s File Activity`;
+        contributorContainer.appendChild(title);
+        
+        // Add chart container
+        const chartContainer = document.createElement('div');
+        chartContainer.style.height = '200px';
+        contributorContainer.appendChild(chartContainer);
+        
+        // Add to main container
+        mainContainer.appendChild(contributorContainer);
+        
+        // Fetch contributor-specific file activity data
+        fetch(`/api/analytics/changes-by-type/${analysisKey}?author=${encodeURIComponent(author)}`)
+            .then(res => res.json())
+            .then(changeTypes => {
+                if (!changeTypes || changeTypes.length === 0) {
+                    chartContainer.innerHTML = "<p>No file activity data available for this contributor.</p>";
+                    return;
+                }
+                
+                // Create SVG for pie chart
+                const width = 300;
+                const height = 200;
+                const radius = Math.min(width, height) / 2;
+                
+                const svg = d3.select(chartContainer)
+                    .append("svg")
+                    .attr("width", width)
+                    .attr("height", height)
+                    .append("g")
+                    .attr("transform", `translate(${width / 2}, ${height / 2})`);
+                    
+                // Create color scale
+                const color = d3.scaleOrdinal()
+                    .domain(changeTypes.map(d => d.status))
+                    .range(d3.schemeCategory10);
+                    
+                // Map status codes to readable names
+                const statusNames = {
+                    'A': 'Added',
+                    'M': 'Modified',
+                    'D': 'Deleted',
+                    'R': 'Renamed',
+                    'C': 'Copied',
+                    'T': 'Type Changed'
+                };
+                
+                // Format the data for pie chart
+                const data = changeTypes.map(d => ({
+                    status: statusNames[d.status] || d.status,
+                    count: d.change_count
+                }));
+                    
+                // Create pie chart
+                const pie = d3.pie()
+                    .value(d => d.count);
+                    
+                const data_ready = pie(data);
+                    
+                // Build arcs
+                const arcGenerator = d3.arc()
+                    .innerRadius(0)
+                    .outerRadius(radius);
+                    
+                // Add tooltip
+                const tooltip = d3.select("body")
+                    .append("div")
+                    .attr("class", "tooltip")
+                    .style("opacity", 0)
+                    .style("position", "absolute")
+                    .style("background-color", "white")
+                    .style("border", "1px solid #ddd")
+                    .style("padding", "10px")
+                    .style("border-radius", "4px")
+                    .style("pointer-events", "none");
+                    
+                // Add slices
+                svg.selectAll('slices')
+                    .data(data_ready)
+                    .enter()
+                    .append('path')
+                    .attr('d', arcGenerator)
+                    .attr('fill', d => color(d.data.status))
+                    .attr('stroke', 'white')
+                    .style('stroke-width', '2px')
+                    .classed('highlighted', true)
+                    .on('mouseover', function(event, d) {
+                        tooltip.transition()
+                            .duration(200)
+                            .style("opacity", .9);
+                        tooltip.html(`${d.data.status}: ${d.data.count} (${(d.data.count / d3.sum(data, d => d.count) * 100).toFixed(1)}%)`)
+                            .style("left", (event.pageX) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on('mouseout', function() {
+                        tooltip.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                    });
+                    
+                // Add labels
+                svg.selectAll('labels')
+                    .data(data_ready)
+                    .enter()
+                    .append('text')
+                    .text(d => d.data.status)
+                    .attr('transform', d => `translate(${arcGenerator.centroid(d)})`)
+                    .style('text-anchor', 'middle')
+                    .style('font-size', '12px')
+                    .style('fill', 'white');
+            })
+            .catch(error => {
+                console.error("Error loading contributor file activity:", error);
+                chartContainer.innerHTML = "<p>Error loading file activity data for this contributor.</p>";
             });
     }
 </script>
@@ -441,17 +914,25 @@
             .style("border-radius", "4px")
             .style("pointer-events", "none");
         
+        // Create objects with additional author data for filtering
+        prTimeData.forEach(month => {
+            // Add placeholder for author-specific PR data
+            month.authorPRs = {};
+        });
+        
         // Add bars
         svg.selectAll("bars")
             .data(prTimeData)
             .enter()
             .append("rect")
+            .attr("class", "pr-month-bar")
             .attr("x", d => x(d.month))
             .attr("y", d => y(d.avg_hours))
             .attr("width", x.bandwidth())
             .attr("height", d => height - y(d.avg_hours))
             .attr("fill", d => color(d.pr_count))
             .attr("cursor", "pointer")
+            .attr("data-month", d => d.month)
             .on("mouseover", function(event, d) {
                 // Highlight bar on hover
                 d3.select(this)
@@ -471,8 +952,11 @@
                     .style("top", (event.pageY - 28) + "px");
             })
             .on("mouseout", function() {
-                d3.select(this)
-                    .attr("stroke", "none");
+                // Only remove stroke if not highlighted by contributor filter
+                if (!this.classList.contains('highlighted')) {
+                    d3.select(this)
+                        .attr("stroke", "none");
+                }
                     
                 tooltip.transition()
                     .duration(500)
@@ -535,7 +1019,8 @@
             .attr("cx", d => x(d.month) + x.bandwidth()/2)
             .attr("cy", d => y2(d.pr_count))
             .attr("r", 5)
-            .attr("fill", "#e74c3c");
+            .attr("fill", "#e74c3c")
+            .attr("class", "pr-count-dot");
         
         // Add legend
         const legend = svg.append("g")
@@ -638,6 +1123,28 @@
             const avgTimeHours = prs.reduce((sum, pr) => sum + (pr.lifetime_minutes / 60), 0) / totalPRs;
             const maxTimeHours = Math.max(...prs.map(pr => pr.lifetime_minutes / 60));
             
+            // Update authorPRs data for this month
+            const monthData = prTimeData.find(d => d.month === month);
+            if (monthData) {
+                // Clear previous data
+                monthData.authorPRs = {};
+                
+                // Count PRs by author
+                prs.forEach(pr => {
+                    if (!monthData.authorPRs[pr.created_by]) {
+                        monthData.authorPRs[pr.created_by] = 0;
+                    }
+                    monthData.authorPRs[pr.created_by]++;
+                    
+                    if (pr.merged_by && pr.created_by !== pr.merged_by) {
+                        if (!monthData.authorPRs[pr.merged_by]) {
+                            monthData.authorPRs[pr.merged_by] = 0;
+                        }
+                        monthData.authorPRs[pr.merged_by]++;
+                    }
+                });
+            }
+            
             // Create HTML content
             let html = `
                 <h3>PRs for ${month}</h3>
@@ -660,8 +1167,16 @@
                 const hours = pr.lifetime_minutes / 60;
                 const color = colorScale(hours);
                 
+                // Check if there's a selected contributor to highlight
+                const selectedContributor = document.getElementById('contributorFilter').value;
+                const isHighlighted = selectedContributor && 
+                    (pr.created_by === selectedContributor || pr.merged_by === selectedContributor);
+                
                 html += `
-                    <div class="pr-item" style="margin-bottom: 10px; padding: 8px; border-left: 4px solid ${color}; background: rgba(0,0,0,0.02);">
+                    <div class="pr-item ${isHighlighted ? 'highlight-row' : ''}" 
+                         data-created-by="${pr.created_by}" 
+                         data-merged-by="${pr.merged_by}"
+                         style="margin-bottom: 10px; padding: 8px; border-left: 4px solid ${color}; background: ${isHighlighted ? '#fff3e0' : 'rgba(0,0,0,0.02)'};">
                         <div style="font-weight: bold;">${pr.branch_name}</div>
                         <div style="display: flex; justify-content: space-between;">
                             <span>Author: <strong>${pr.created_by}</strong></span>
@@ -680,6 +1195,18 @@
             });
             
             html += `</div>`;
+            
+            // If there's a filtered contributor, update the PR timeline visualization
+            const selectedContributor = document.getElementById('contributorFilter').value;
+            if (selectedContributor) {
+                // Apply highlights to the PR Timeline visualization based on updated authorPRs data
+                d3.selectAll('.pr-month-bar')
+                    .each(function(d) {
+                        if (d.authorPRs && d.authorPRs[selectedContributor] && d.authorPRs[selectedContributor] > 0) {
+                            d3.select(this).classed('highlighted', true);
+                        }
+                    });
+            }
             detailsContainer.innerHTML = html;
         }
     }
@@ -690,6 +1217,425 @@
     // Data injected from the server
     const dataPoints = <%- JSON.stringify(contributors || []) %>;
     const networkData = <%- JSON.stringify(networkData || []) %>;
+    
+    // Filter settings - stored per analysis
+    const filters = {};
+    
+    // Initialize filter storage
+    function initFilters() {
+        if (!filters[analysisKey]) {
+            filters[analysisKey] = {
+                contributors: [], // Contributors to exclude
+                files: [],        // Files/patterns to exclude
+            };
+        }
+    }
+    
+    // Ensure we have the filter structure before using it
+    initFilters();
+    
+    // Original data cache to allow filtering without reloading
+    const originalData = {
+        contributors: [...dataPoints],
+        networkData: [...networkData],
+        // We'll cache other data as needed when loading
+        commitTypes: null,
+        commits: null,
+        prLifecycle: null,
+        hotFiles: null,
+        fileExtensions: null,
+        fileChangeTypes: null,
+    };
+    
+    // Store filtered copies of the data
+    let filteredData = {
+        contributors: [...dataPoints],
+        networkData: [...networkData],
+        // These will be populated as they're loaded
+        commitTypes: null,
+        commits: null,
+        prLifecycle: null,
+        hotFiles: null,
+        fileExtensions: null,
+        fileChangeTypes: null,
+    };
+    
+    // Filter Modal Management
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('filterModal');
+        const settingsButton = document.getElementById('settingsButton');
+        const closeButton = modal.querySelector('.modal-close');
+        const cancelButton = document.getElementById('cancelFilters');
+        const applyButton = document.getElementById('applyFilters');
+        const resetButton = document.getElementById('resetFilters');
+        
+        // Contributor filter elements
+        const contributorInput = document.getElementById('contributorFilterInput');
+        const addContributorButton = document.getElementById('addContributorFilter');
+        const contributorList = document.getElementById('contributorFilterList');
+        const suggestedContributors = document.querySelectorAll('.suggested-contributor');
+        
+        // File filter elements
+        const fileInput = document.getElementById('fileFilterInput');
+        const addFileButton = document.getElementById('addFileFilter');
+        const fileList = document.getElementById('fileFilterList');
+        const suggestedFiles = document.querySelectorAll('.suggested-file');
+        
+        // Open modal
+        settingsButton.addEventListener('click', function() {
+            modal.style.display = 'block';
+            loadFilterUIState();
+        });
+        
+        // Close modal with X button or Cancel
+        closeButton.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+        
+        cancelButton.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+        
+        // Close when clicking outside modal
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+        
+        // Add contributor filter
+        addContributorButton.addEventListener('click', function() {
+            // Ensure filters are initialized
+            initFilters();
+            
+            const name = contributorInput.value.trim();
+            if (name && !filters[analysisKey].contributors.includes(name)) {
+                filters[analysisKey].contributors.push(name);
+                contributorInput.value = '';
+                updateContributorFilterUI();
+            }
+        });
+        
+        // Add file filter
+        addFileButton.addEventListener('click', function() {
+            // Ensure filters are initialized
+            initFilters();
+            
+            const path = fileInput.value.trim();
+            if (path && !filters[analysisKey].files.includes(path)) {
+                filters[analysisKey].files.push(path);
+                fileInput.value = '';
+                updateFileFilterUI();
+            }
+        });
+        
+        // Handle suggested contributor clicks
+        suggestedContributors.forEach(button => {
+            button.addEventListener('click', function() {
+                const name = this.getAttribute('data-name');
+                // Ensure filters are initialized
+                initFilters();
+                
+                if (!filters[analysisKey].contributors.includes(name)) {
+                    filters[analysisKey].contributors.push(name);
+                    updateContributorFilterUI();
+                }
+            });
+        });
+        
+        // Handle suggested file clicks
+        suggestedFiles.forEach(button => {
+            button.addEventListener('click', function() {
+                const path = this.getAttribute('data-path');
+                // Ensure filters are initialized
+                initFilters();
+                
+                if (!filters[analysisKey].files.includes(path)) {
+                    filters[analysisKey].files.push(path);
+                    updateFileFilterUI();
+                }
+            });
+        });
+        
+        // Apply filters
+        applyButton.addEventListener('click', function() {
+            modal.style.display = 'none';
+            
+            // Save filters to localStorage
+            localStorage.setItem(`engineeringMetricsFilters_${analysisKey}`, JSON.stringify(filters[analysisKey]));
+            
+            // Update badge if filters exist
+            updateFilterBadge();
+            
+            // Apply filters to data
+            window.applyFiltersToData();
+            
+            // Redraw all visualizations
+            redrawVisualizations();
+        });
+        
+        // Reset all filters
+        resetButton.addEventListener('click', function() {
+            // Ensure filters are initialized
+            initFilters();
+            
+            filters[analysisKey].contributors = [];
+            filters[analysisKey].files = [];
+            
+            // Update UI
+            updateContributorFilterUI();
+            updateFileFilterUI();
+            
+            // Clear localStorage
+            localStorage.removeItem(`engineeringMetricsFilters_${analysisKey}`);
+        });
+        
+        // Load saved filters from localStorage
+        function loadSavedFilters() {
+            // Ensure filters are initialized
+            initFilters();
+            
+            const savedFilters = localStorage.getItem(`engineeringMetricsFilters_${analysisKey}`);
+            if (savedFilters) {
+                try {
+                    const parsed = JSON.parse(savedFilters);
+                    filters[analysisKey].contributors = parsed.contributors || [];
+                    filters[analysisKey].files = parsed.files || [];
+                    
+                    // Update badge
+                    updateFilterBadge();
+                    
+                    // Apply filters to data
+                    window.applyFiltersToData();
+                } catch (e) {
+                    console.error('Error loading saved filters:', e);
+                }
+            }
+        }
+        
+        // Update the UI for contributor filters
+        function updateContributorFilterUI() {
+            contributorList.innerHTML = '';
+            
+            // Ensure filters are initialized
+            initFilters();
+            
+            filters[analysisKey].contributors.forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'filter-item';
+                
+                item.innerHTML = `
+                    <span>${name}</span>
+                    <button class="remove-filter" data-type="contributor" data-value="${name}">&times;</button>
+                `;
+                
+                contributorList.appendChild(item);
+            });
+            
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-filter[data-type="contributor"]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const name = this.getAttribute('data-value');
+                    filters[analysisKey].contributors = filters[analysisKey].contributors.filter(c => c !== name);
+                    updateContributorFilterUI();
+                });
+            });
+        }
+        
+        // Update the UI for file filters
+        function updateFileFilterUI() {
+            fileList.innerHTML = '';
+            
+            // Ensure filters are initialized
+            initFilters();
+            
+            filters[analysisKey].files.forEach(path => {
+                const item = document.createElement('div');
+                item.className = 'filter-item';
+                
+                item.innerHTML = `
+                    <span>${path}</span>
+                    <button class="remove-filter" data-type="file" data-value="${path}">&times;</button>
+                `;
+                
+                fileList.appendChild(item);
+            });
+            
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-filter[data-type="file"]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const path = this.getAttribute('data-value');
+                    filters[analysisKey].files = filters[analysisKey].files.filter(f => f !== path);
+                    updateFileFilterUI();
+                });
+            });
+        }
+        
+        // Update filter badge to show number of active filters
+        function updateFilterBadge() {
+            // Ensure filters are initialized
+            initFilters();
+            
+            const totalFilters = filters[analysisKey].contributors.length + filters[analysisKey].files.length;
+            const badge = document.createElement('span');
+            badge.className = 'filter-badge';
+            
+            if (totalFilters > 0) {
+                badge.style.display = 'block';
+                badge.textContent = totalFilters > 9 ? '9+' : totalFilters;
+                
+                // Remove existing badge if any
+                const existingBadge = settingsButton.querySelector('.filter-badge');
+                if (existingBadge) {
+                    settingsButton.removeChild(existingBadge);
+                }
+                
+                settingsButton.appendChild(badge);
+                settingsButton.style.position = 'relative';
+            } else {
+                // Remove badge if no filters
+                const existingBadge = settingsButton.querySelector('.filter-badge');
+                if (existingBadge) {
+                    settingsButton.removeChild(existingBadge);
+                }
+            }
+        }
+        
+        // Load filter UI state
+        function loadFilterUIState() {
+            updateContributorFilterUI();
+            updateFileFilterUI();
+        }
+        
+        // Apply filters to data
+        window.applyFiltersToData = function() {
+            // Ensure filters are initialized
+            initFilters();
+            
+            if (filters[analysisKey].contributors.length === 0 && filters[analysisKey].files.length === 0) {
+                // No filters, use original data
+                filteredData.contributors = [...originalData.contributors];
+                filteredData.networkData = [...originalData.networkData];
+                filteredData.commitTypes = originalData.commitTypes ? [...originalData.commitTypes] : null;
+                filteredData.commits = originalData.commits ? [...originalData.commits] : null;
+                filteredData.prLifecycle = originalData.prLifecycle ? [...originalData.prLifecycle] : null;
+                filteredData.hotFiles = originalData.hotFiles ? [...originalData.hotFiles] : null;
+                filteredData.fileExtensions = originalData.fileExtensions ? [...originalData.fileExtensions] : null;
+                filteredData.fileChangeTypes = originalData.fileChangeTypes ? [...originalData.fileChangeTypes] : null;
+                return;
+            }
+            
+            // Filter contributors
+            filteredData.contributors = originalData.contributors.filter(contributor => 
+                !filters[analysisKey].contributors.includes(contributor.author));
+            
+            // Filter network data
+            filteredData.networkData = originalData.networkData.filter(relation => 
+                !filters[analysisKey].contributors.includes(relation.creator) && 
+                !filters[analysisKey].contributors.includes(relation.editor));
+            
+            // Filter commit types if loaded
+            if (originalData.commitTypes) {
+                filteredData.commitTypes = originalData.commitTypes.filter(item => 
+                    !filters[analysisKey].contributors.includes(item.author));
+            }
+            
+            // Filter commits if loaded
+            if (originalData.commits) {
+                filteredData.commits = originalData.commits.filter(commit => {
+                    // Filter by author
+                    if (filters[analysisKey].contributors.includes(commit.author)) {
+                        return false;
+                    }
+                    
+                    // Filter by file path if this commit has files data
+                    if (commit.files && Array.isArray(commit.files)) {
+                        // Keep commit if any file doesn't match filters
+                        return commit.files.some(file => {
+                            // Use partial matching for file paths
+                            return !filters[analysisKey].files.some(pattern => 
+                                file.filename.includes(pattern));
+                        });
+                    }
+                    
+                    return true;
+                });
+            }
+            
+            // Filter PR lifecycle if loaded
+            if (originalData.prLifecycle) {
+                filteredData.prLifecycle = originalData.prLifecycle.filter(pr => 
+                    !filters[analysisKey].contributors.includes(pr.created_by) && 
+                    !filters[analysisKey].contributors.includes(pr.merged_by));
+            }
+            
+            // Filter hot files if loaded
+            if (originalData.hotFiles) {
+                filteredData.hotFiles = originalData.hotFiles.filter(file => {
+                    // Use partial matching for file paths
+                    return !filters[analysisKey].files.some(pattern => 
+                        file.filename.includes(pattern));
+                });
+            }
+            
+            // Filter file extensions if loaded
+            if (originalData.fileExtensions) {
+                // Keep all extensions - they are useful data
+                filteredData.fileExtensions = [...originalData.fileExtensions];
+            }
+            
+            // Filter file change types if loaded
+            if (originalData.fileChangeTypes) {
+                // Keep all change types - they are aggregate stats
+                filteredData.fileChangeTypes = [...originalData.fileChangeTypes];
+            }
+        }
+        
+        // Function to redraw all visualizations with filtered data
+        function redrawVisualizations() {
+            // Reset containers
+            document.getElementById('contributorScatterPlot').innerHTML = '';
+            document.getElementById('networkGraph').innerHTML = '';
+            document.getElementById('commitTypes').innerHTML = '';
+            document.getElementById('fileChangeTypes').innerHTML = '';
+            document.getElementById('hotFiles').innerHTML = '';
+            document.getElementById('prTimeByMonth').innerHTML = '';
+            document.getElementById('commitActivity').innerHTML = '';
+            document.getElementById('commitsTable').innerHTML = '';
+            document.getElementById('prLifecycle').innerHTML = '';
+            document.getElementById('fileExtensions').innerHTML = '';
+            
+            // Redraw scatter plot
+            if (filteredData.contributors.length > 0) {
+                initScatterPlot(filteredData.contributors);
+            } else {
+                document.getElementById('contributorScatterPlot').innerHTML = 
+                    '<p class="empty-data">No contributors to display after filtering.</p>';
+            }
+            
+            // Redraw network graph
+            if (filteredData.networkData.length > 0) {
+                createNetworkGraph(filteredData.networkData);
+            } else {
+                document.getElementById('networkGraph').innerHTML = 
+                    '<p class="empty-data">No collaboration data to display after filtering.</p>';
+            }
+            
+            // Reload and redraw other visualizations
+            loadCommitsData(true);  // Force reload
+            loadFileActivityData(true); // Force reload
+            loadPRMetricsData(true); // Force reload
+        }
+        
+        // Initialize scatter plot with filtered data
+        function initScatterPlot(data) {
+            // Copy the original scatter plot code but use provided data instead of dataPoints
+            // This function will be implemented within initVisualizations
+        }
+        
+        // Load saved filters on page load
+        loadSavedFilters();
+    });
 
     // Function to open tabs
     function openTab(evt, tabName) {
@@ -711,6 +1657,33 @@
         // Activate the selected tab
         document.getElementById(tabName).classList.add("active");
         evt.currentTarget.classList.add("active");
+    }
+    
+    // Function for contributor tabs
+    function openContributorTab(evt, tabName) {
+        // Find the parent tab container
+        const tabContainer = evt.currentTarget.closest('.tab-container');
+        
+        // Get tabcontent elements only within this container
+        const tabcontent = tabContainer.getElementsByClassName("contributor-tabcontent");
+        for (let i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].classList.remove("active");
+        }
+        
+        // Get tablinks elements only within this container
+        const tablinks = tabContainer.getElementsByClassName("tablinks");
+        for (let i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+        
+        // Activate the selected tab
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+        
+        // If switching to all contributors, load them if not loaded yet
+        if (tabName === 'allContributors' && !window.allContributorsLoaded) {
+            loadAllContributors();
+        }
     }
 
     // Scatter Plot Visualization with Zoom
@@ -783,18 +1756,55 @@
         .attr("cx", d => xScale(d.creates))
         .attr("cy", d => yScale(d.edits))
         .attr("r", 8)
-        .attr("fill", "steelblue")
-        .on("mouseover", function(event, d) {
-            tooltip.style("left", (event.pageX + 10) + "px")
-                .style("top", (event.pageY - 10) + "px")
-                .style("display", "inline-block")
-                .html(`<strong>${d.author}</strong><br/>Creates: ${d.creates}<br/>Edits: ${d.edits}`);
+        .attr("fill", d => {
+            // Color scale based on influence score (if available)
+            if (d.influenceScore) {
+                const colorScale = d3.scaleLinear()
+                    .domain([0, d3.max(dataPoints, p => p.influenceScore || 0)])
+                    .range(["#69b3a2", "#e41a1c"]);
+                return colorScale(d.influenceScore);
+            }
+            return "steelblue";
         })
-        .on("mouseout", () => {
+        .on("mouseover", function(event, d) {
+            // Highlight the point
+            d3.select(this)
+                .transition()
+                .duration(200)
+                .attr("r", 12)
+                .style("stroke", "#333")
+                .style("stroke-width", "2px");
+                
+            // Show enhanced tooltip
+            tooltip.style("left", (event.pageX + 15) + "px")
+                .style("top", (event.pageY - 15) + "px")
+                .style("display", "inline-block")
+                .html(`
+                    <div style="background-color: #f9f9f9; padding: 10px; border-radius: 4px; border: 1px solid #ddd; min-width: 180px;">
+                        <div style="font-weight: bold; font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 5px;">
+                            ${d.author}
+                        </div>
+                        <div><strong>Creates:</strong> ${d.creates}</div>
+                        <div><strong>Edits:</strong> ${d.edits}</div>
+                        ${d.influenceScore ? `<div><strong>Influence Score:</strong> ${d.influenceScore}</div>` : ''}
+                        <div style="font-size: 0.9em; color: #666; margin-top: 6px; font-style: italic;">
+                            Click to view detailed profile
+                        </div>
+                    </div>
+                `);
+        })
+        .on("mouseout", function() {
+            // Restore point appearance
+            d3.select(this)
+                .transition()
+                .duration(200)
+                .attr("r", 8)
+                .style("stroke", "none");
+                
             tooltip.style("display", "none");
         })
         .on("click", function(event, d) {
-            fetchContributorDetails(d.author);
+            highlightContributor(d.author);
         });
 
     // Add zoom functionality
@@ -865,35 +1875,90 @@
         }
         
         panelContent.innerHTML = `
-        <h2>${details.influenceRank} ${details.author}</h2>
-        <p><strong>Creates:</strong> ${details.creates}</p>
-        <p><strong>Edits:</strong> ${details.edits}</p>
-        <p><strong>Edits on their files:</strong> ${details.editsToCreations}</p>
-        <p><strong>Influence Score:</strong> ${details.influenceScore}</p>
-        <p style="font-size: 0.9em; color: #555;">
-          <em>
-            Influence Score is calculated as: Edits + (Creates × Multiplier), where
-            Multiplier = (Edits on created files > 0 ? Edits on created files : 1)
-          </em>
-        </p>
+        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="margin-top: 0; color: #333;">${details.influenceRank || ''} ${details.author}</h2>
+            <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 15px;">
+                <div style="flex: 1; min-width: 120px; background: white; padding: 10px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="font-size: 0.9em; color: #666;">Creates</div>
+                    <div style="font-size: 1.5em; font-weight: bold; color: #2196F3;">${details.creates}</div>
+                </div>
+                <div style="flex: 1; min-width: 120px; background: white; padding: 10px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="font-size: 0.9em; color: #666;">Edits</div>
+                    <div style="font-size: 1.5em; font-weight: bold; color: #4CAF50;">${details.edits}</div>
+                </div>
+                <div style="flex: 1; min-width: 120px; background: white; padding: 10px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="font-size: 0.9em; color: #666;">Edits on their files</div>
+                    <div style="font-size: 1.5em; font-weight: bold; color: #FF9800;">${details.editsToCreations}</div>
+                </div>
+            </div>
+            
+            <div style="background: white; padding: 15px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                    <div style="font-size: 0.9em; color: #666;">Influence Score</div>
+                    <div style="font-size: 1.8em; font-weight: bold; color: #E91E63;">${details.influenceScore}</div>
+                </div>
+                <div style="font-size: 0.85em; color: #777; margin-top: 8px; font-style: italic;">
+                    Calculated as: Edits + (Creates × Multiplier), where
+                    Multiplier = (Edits on created files > 0 ? Edits on created files : 1)
+                </div>
+            </div>
+        </div>
         
-        <h3>PR Metrics</h3>
+        <h3 style="border-bottom: 1px solid #eee; padding-bottom: 8px;">PR Metrics</h3>
         ${prMetricsHTML}
         
-        <h3>Contributions per Repository</h3>
+        <h3 style="border-bottom: 1px solid #eee; padding-bottom: 8px; margin-top: 25px;">Contributions per Repository</h3>
         ${details.perRepo && details.perRepo.length > 0 ? `
-          <ul>
-            ${details.perRepo.map(repo => `<li>${repo.repository}: ${repo.creates} creates, ${repo.edits} edits</li>`).join('')}
-          </ul>
+          <div style="background: white; padding: 10px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+              <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                      <tr style="border-bottom: 1px solid #eee;">
+                          <th style="text-align: left; padding: 8px;">Repository</th>
+                          <th style="text-align: center; padding: 8px;">Creates</th>
+                          <th style="text-align: center; padding: 8px;">Edits</th>
+                          <th style="text-align: center; padding: 8px;">Total</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      ${details.perRepo.map(repo => `
+                          <tr style="border-bottom: 1px solid #f5f5f5;">
+                              <td style="padding: 8px;">${repo.repository}</td>
+                              <td style="text-align: center; padding: 8px; color: #2196F3;">${repo.creates}</td>
+                              <td style="text-align: center; padding: 8px; color: #4CAF50;">${repo.edits}</td>
+                              <td style="text-align: center; padding: 8px; font-weight: bold;">${repo.creates + repo.edits}</td>
+                          </tr>
+                      `).join('')}
+                  </tbody>
+              </table>
+          </div>
         ` : '<p>No per-repository data available.</p>'}
       `;
         panel.classList.add('open');
     }
 
-    // Function to hide the side panel
-    document.getElementById('closePanel').addEventListener('click', () => {
-        document.getElementById('sidePanel').classList.remove('open');
-    });
+    // Function to populate the contributor dropdown
+    function populateContributorDropdown() {
+        const dropdown = document.getElementById('contributorFilter');
+        if (!dropdown) return;
+        
+        // Wait for data to be available
+        const checkData = setInterval(() => {
+            if (originalData && originalData.contributors && originalData.contributors.length > 0) {
+                clearInterval(checkData);
+                
+                // Sort contributors by influence score
+                const sortedContributors = [...originalData.contributors].sort((a, b) => b.influenceScore - a.influenceScore);
+                
+                // Add contributor options
+                sortedContributors.forEach(contributor => {
+                    const option = document.createElement('option');
+                    option.value = contributor.author;
+                    option.textContent = contributor.author;
+                    dropdown.appendChild(option);
+                });
+            }
+        }, 500); // Check every 500ms
+    }
 
     // Initialize data visualizations
     document.addEventListener('DOMContentLoaded', function() {
@@ -909,19 +1974,201 @@
             });
         });
         
+        // Set up contributor search functionality
+        setupContributorSearch();
+        
+        // Populate contributor dropdown
+        populateContributorDropdown();
+        
+        // Set up contributor filter dropdown
+        document.getElementById('contributorFilter').addEventListener('change', function() {
+            highlightContributor(this.value);
+        });
+        
         // Activate tooltips for all charts
         activateTooltips();
     });
     
+    // Function to load all contributors with pagination
+    function loadAllContributors() {
+        // Mark as loading to prevent duplicate loads
+        window.allContributorsLoaded = true;
+        
+        // Initialize pagination state
+        window.contributorPagination = {
+            page: 1,
+            pageSize: 20,
+            data: [],
+            filtered: [] // For search functionality
+        };
+        
+        // Show loading state
+        document.getElementById('fullContributorList').innerHTML = '<li class="loading-indicator">Loading all contributors...</li>';
+        
+        // Fetch all contributors (already loaded in the original data)
+        if (originalData && originalData.contributors) {
+            // Sort contributors by influence score (highest first)
+            const allContributors = [...originalData.contributors].sort((a, b) => b.influenceScore - a.influenceScore);
+            
+            // Store in pagination state
+            window.contributorPagination.data = allContributors;
+            window.contributorPagination.filtered = allContributors;
+            
+            // Render first page
+            renderContributorPage();
+            
+            // Set up pagination controls
+            document.getElementById('prevContributorsPage').addEventListener('click', function() {
+                if (window.contributorPagination.page > 1) {
+                    window.contributorPagination.page--;
+                    renderContributorPage();
+                }
+            });
+            
+            document.getElementById('nextContributorsPage').addEventListener('click', function() {
+                const maxPage = Math.ceil(window.contributorPagination.filtered.length / window.contributorPagination.pageSize);
+                if (window.contributorPagination.page < maxPage) {
+                    window.contributorPagination.page++;
+                    renderContributorPage();
+                }
+            });
+        } else {
+            // Fetch from API if not in original data
+            fetch(`/api/contributors/${analysisKey}`)
+                .then(response => response.json())
+                .then(contributors => {
+                    // Sort contributors by influence score (highest first)
+                    const allContributors = contributors.sort((a, b) => b.influenceScore - a.influenceScore);
+                    
+                    // Store in pagination state
+                    window.contributorPagination.data = allContributors;
+                    window.contributorPagination.filtered = allContributors;
+                    
+                    // Render first page
+                    renderContributorPage();
+                    
+                    // Set up pagination controls
+                    document.getElementById('prevContributorsPage').addEventListener('click', function() {
+                        if (window.contributorPagination.page > 1) {
+                            window.contributorPagination.page--;
+                            renderContributorPage();
+                        }
+                    });
+                    
+                    document.getElementById('nextContributorsPage').addEventListener('click', function() {
+                        const maxPage = Math.ceil(window.contributorPagination.filtered.length / window.contributorPagination.pageSize);
+                        if (window.contributorPagination.page < maxPage) {
+                            window.contributorPagination.page++;
+                            renderContributorPage();
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading contributors:', error);
+                    document.getElementById('fullContributorList').innerHTML = 
+                        '<li class="error">Error loading contributors. Please try again.</li>';
+                });
+        }
+    }
+    
+    // Function to render the current page of contributors
+    function renderContributorPage() {
+        if (!window.contributorPagination) return;
+        
+        const { page, pageSize, filtered } = window.contributorPagination;
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const pageData = filtered.slice(startIndex, endIndex);
+        
+        // Update pagination info and buttons
+        document.getElementById('contributorPageInfo').textContent = `Page ${page} of ${Math.ceil(filtered.length / pageSize)}`;
+        document.getElementById('prevContributorsPage').disabled = page === 1;
+        document.getElementById('nextContributorsPage').disabled = page >= Math.ceil(filtered.length / pageSize);
+        
+        // Generate HTML for the contributors on this page
+        const listElement = document.getElementById('fullContributorList');
+        
+        if (pageData.length === 0) {
+            listElement.innerHTML = '<li class="empty-search">No contributors match your search criteria.</li>';
+            return;
+        }
+        
+        let html = '';
+        pageData.forEach(contributor => {
+            html += `
+                <li 
+                    onclick="highlightContributor('${contributor.author}')" 
+                    class="contributor-item" 
+                    data-author="${contributor.author}" 
+                    data-score="${contributor.influenceScore}"
+                    data-creates="${contributor.creates}"
+                    data-edits="${contributor.edits}"
+                >
+                    <strong>${contributor.author}</strong> – Score: ${contributor.influenceScore}
+                    <div style="font-size: 0.9em; color: #666;">
+                        Creates: ${contributor.creates}, 
+                        Edits: ${contributor.edits},
+                        Edits on created files: ${contributor.editsToCreations || 0}
+                    </div>
+                </li>
+            `;
+        });
+        
+        listElement.innerHTML = html;
+    }
+    
+    // Set up contributor search functionality
+    function setupContributorSearch() {
+        const searchInput = document.getElementById('contributorSearch');
+        if (!searchInput) return;
+        
+        searchInput.addEventListener('input', function() {
+            if (!window.contributorPagination || !window.contributorPagination.data) return;
+            
+            const searchTerm = this.value.toLowerCase().trim();
+            
+            if (searchTerm === '') {
+                // If search is empty, show all contributors
+                window.contributorPagination.filtered = window.contributorPagination.data;
+            } else {
+                // Filter contributors by search term (author name)
+                window.contributorPagination.filtered = window.contributorPagination.data.filter(
+                    contributor => contributor.author.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Reset to first page and render
+            window.contributorPagination.page = 1;
+            renderContributorPage();
+        });
+    }
+    
     // Function to initialize all visualizations
     function initVisualizations() {
         try {
-            createNetworkGraph();
+            // Ensure filters are initialized
+            initFilters();
+            
+            // Apply initial filters
+            window.applyFiltersToData();
+            
+            // Initial scatter plot
+            initScatterPlot(filteredData.contributors);
+            
+            // Network graph with filtered data - only show if we have data
+            if (filteredData.networkData && filteredData.networkData.length > 0) {
+                // Show the network card
+                document.getElementById('collaborationNetworkCard').style.display = 'block';
+                createNetworkGraph(filteredData.networkData);
+            } else {
+                // Hide the network card if no data
+                document.getElementById('collaborationNetworkCard').style.display = 'none';
+            }
+            
+            // Load other data
             loadCommitsData();
             loadFileActivityData();
             loadPRMetricsData();
-            // Remove the undefined function call that's causing errors
-            // renderWorkTypesByContributor(); 
         } catch (error) {
             console.error("Error initializing visualizations:", error);
             // Show a helpful error message on the page
@@ -932,6 +2179,145 @@
                     <p>Error details: ${error.message}</p>
                 </div>`;
             });
+        }
+    }
+    
+    // Initialize scatter plot with filtered data (original or filtered)
+    function initScatterPlot(data) {
+        if (!data || data.length === 0) {
+            document.getElementById('contributorScatterPlot').innerHTML = 
+                '<p class="empty-data">No contributors to display after filtering.</p>';
+            return;
+        }
+    
+        const container = document.getElementById('contributorScatterPlot');
+        container.innerHTML = ''; // Clear container
+        
+        const width = 600, height = 400;
+        const margin = { top: 50, right: 50, bottom: 50, left: 50 };
+    
+        // Create SVG element
+        const svg = d3.select(container)
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g");  // Add a group for all elements for easier zooming
+    
+        // Define the scales
+        const xScale = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.creates) + 5])
+            .range([margin.left, width - margin.right]);
+    
+        const yScale = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.edits) + 5])
+            .range([height - margin.bottom, margin.top]);
+    
+        // Create clip path to prevent points from rendering outside the chart area
+        svg.append("defs").append("clipPath")
+            .attr("id", "clip")
+            .append("rect")
+            .attr("width", width - margin.left - margin.right)
+            .attr("height", height - margin.top - margin.bottom)
+            .attr("x", margin.left)
+            .attr("y", margin.top);
+    
+        // Create chart area with clipping
+        const chartArea = svg.append("g")
+            .attr("clip-path", "url(#clip)");
+    
+        // X-axis (File Creations)
+        const xAxisGroup = svg.append("g")
+            .attr("transform", `translate(0, ${height - margin.bottom})`)
+            .call(d3.axisBottom(xScale));
+    
+        xAxisGroup.append("text")
+            .attr("x", width - margin.right)
+            .attr("y", -10)
+            .attr("fill", "#000")
+            .style("text-anchor", "end")
+            .text("File Creations");
+    
+        // Y-axis (File Edits)
+        const yAxisGroup = svg.append("g")
+            .attr("transform", `translate(${margin.left}, 0)`)
+            .call(d3.axisLeft(yScale));
+    
+        yAxisGroup.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("x", -margin.top)
+            .attr("y", 15)
+            .attr("fill", "#000")
+            .style("text-anchor", "end")
+            .text("File Edits");
+    
+        // Tooltip for hover effect
+        const tooltip = d3.select("#tooltip");
+    
+        // Add the scatter plot points
+        const dots = chartArea.selectAll(".dot")
+            .data(data)
+            .enter()
+            .append("circle")
+            .attr("class", "dot")
+            .attr("cx", d => xScale(d.creates))
+            .attr("cy", d => yScale(d.edits))
+            .attr("r", 8)
+            .attr("fill", "steelblue")
+            .on("mouseover", function(event, d) {
+                tooltip.style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 10) + "px")
+                    .style("display", "inline-block")
+                    .html(`<strong>${d.author}</strong><br/>Creates: ${d.creates}<br/>Edits: ${d.edits}`);
+            })
+            .on("mouseout", () => {
+                tooltip.style("display", "none");
+            })
+            .on("click", function(event, d) {
+                fetchContributorDetails(d.author);
+            });
+    
+        // Add zoom functionality
+        const zoom = d3.zoom()
+            .scaleExtent([0.5, 20])  // Set the zoom extent
+            .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]])
+            .on("zoom", zoomed);
+    
+        // Apply zoom to the SVG
+        svg.append("rect")
+            .attr("width", width)
+            .attr("height", height)
+            .style("fill", "none")
+            .style("pointer-events", "all")
+            .call(zoom);
+    
+        // Add reset zoom button
+        svg.append("text")
+            .attr("x", width - margin.right)
+            .attr("y", margin.top / 2)
+            .attr("text-anchor", "end")
+            .style("font-size", "12px")
+            .style("cursor", "pointer")
+            .style("fill", "#2196F3")
+            .text("Reset Zoom")
+            .on("click", function() {
+                svg.transition()
+                    .duration(750)
+                    .call(zoom.transform, d3.zoomIdentity);
+            });
+    
+        // Function to handle zoom event
+        function zoomed(event) {
+            // Update the transform of all elements
+            const newX = event.transform.rescaleX(xScale);
+            const newY = event.transform.rescaleY(yScale);
+            
+            // Update axes
+            xAxisGroup.call(d3.axisBottom(newX));
+            yAxisGroup.call(d3.axisLeft(newY));
+            
+            // Update dots
+            dots.attr("cx", d => newX(d.creates))
+                .attr("cy", d => newY(d.edits));
         }
     }
     
@@ -958,16 +2344,32 @@
         d3.select("#tooltip").style("display", "none");
     }
 
-    function createNetworkGraph() {
-        // Only create the graph once
-        if (document.querySelector('#networkGraph svg')) return;
+    function createNetworkGraph(data = null) {
+        // Use provided data or fallback to filtered data
+        const graphData = data || filteredData.networkData;
+        
+        // Get the network card element
+        const networkCard = document.getElementById('collaborationNetworkCard');
+        
+        // Check for empty data and update card visibility
+        if (!graphData || graphData.length === 0) {
+            // Hide the entire network card
+            networkCard.style.display = 'none';
+            return;
+        } else {
+            // Show the card if it has data
+            networkCard.style.display = 'block';
+        }
+        
+        // Clear existing graph
+        document.getElementById('networkGraph').innerHTML = '';
         
         const graphWidth = document.getElementById('networkGraph').clientWidth;
         const graphHeight = 500;
         
         // Create nodes from unique creators and editors
         const uniqueAuthors = new Set();
-        networkData.forEach(d => {
+        graphData.forEach(d => {
             uniqueAuthors.add(d.creator);
             uniqueAuthors.add(d.editor);
         });
@@ -975,7 +2377,7 @@
         const nodes = Array.from(uniqueAuthors).map(name => ({ id: name }));
         
         // Create links from collaboration data
-        const links = networkData.map(d => ({
+        const links = graphData.map(d => ({
             source: d.creator,
             target: d.editor,
             value: d.collaboration_count
@@ -1076,29 +2478,94 @@
     
     // Raw data visualization functions
     // Function to load commits data for the commits tab
-    function loadCommitsData() {
-        if (document.querySelector('#commitsTable table')) return; // Only load once
+    function loadCommitsData(forceReload = false) {
+        // Skip if already loaded and not forced to reload
+        if (document.querySelector('#commitsTable table') && !forceReload) return;
+        
+        // Use cached data if available and not forced to reload
+        if (filteredData.commits && !forceReload) {
+            renderCommitsTable(filteredData.commits.slice(0, 50));
+            window.allCommits = filteredData.commits;
+            window.currentPage = 1;
+            
+            // Ensure we have the event listener
+            const loadMoreBtn = document.getElementById('loadMoreCommits');
+            if (loadMoreBtn) {
+                // Remove existing listeners to avoid duplicates
+                const newBtn = loadMoreBtn.cloneNode(true);
+                loadMoreBtn.parentNode.replaceChild(newBtn, loadMoreBtn);
+                newBtn.addEventListener('click', loadMoreCommits);
+            }
+            return;
+        }
+        
+        // Show loading state
+        document.getElementById('commitsTable').innerHTML = '<p class="loading">Loading commit data...</p>';
         
         fetch(`/api/commits/${analysisKey}`)
             .then(res => res.json())
             .then(commits => {
-                renderCommitsTable(commits.slice(0, 50)); // Show first 50 commits
+                // Cache original data
+                originalData.commits = [...commits];
                 
-                // Store all commits for pagination
-                window.allCommits = commits;
+                // Apply filters
+                if (filters.contributors.length > 0) {
+                    // Filter out excluded contributors
+                    filteredData.commits = commits.filter(commit => 
+                        !filters.contributors.includes(commit.author));
+                } else {
+                    filteredData.commits = [...commits];
+                }
+                
+                // Render the filtered data
+                renderCommitsTable(filteredData.commits.slice(0, 50));
+                
+                // Store for pagination
+                window.allCommits = filteredData.commits;
                 window.currentPage = 1;
                 
                 // Add event listener for "Load More" button
-                document.getElementById('loadMoreCommits').addEventListener('click', loadMoreCommits);
+                const loadMoreBtn = document.getElementById('loadMoreCommits');
+                if (loadMoreBtn) {
+                    // Remove existing listeners to avoid duplicates
+                    const newBtn = loadMoreBtn.cloneNode(true);
+                    loadMoreBtn.parentNode.replaceChild(newBtn, loadMoreBtn);
+                    newBtn.addEventListener('click', loadMoreCommits);
+                }
             })
             .catch(error => {
                 console.error('Error loading commits data:', error);
-                document.getElementById('commitsTable').innerHTML = '<p>Error loading commit data. Please try again.</p>';
+                document.getElementById('commitsTable').innerHTML = 
+                    '<p class="error">Error loading commit data. Please try again.</p>';
             });
     }
     
     // Function to load file activity data
-    function loadFileActivityData() {
+    function loadFileActivityData(forceReload = false) {
+        // Skip if already loaded the visualization and not forcing reload
+        if (!forceReload && 
+            document.querySelector('#fileChangeTypes svg') && 
+            document.querySelector('#hotFiles svg')) {
+            return;
+        }
+        
+        // Use cached data if available and not forced to reload
+        if (!forceReload && 
+            filteredData.fileChangeTypes && 
+            filteredData.fileExtensions && 
+            filteredData.hotFiles) {
+            
+            renderFileChangeTypes(filteredData.fileChangeTypes);
+            renderFileExtensions(filteredData.fileExtensions);
+            renderHotFiles(filteredData.hotFiles);
+            return;
+        }
+        
+        // Show loading states
+        document.getElementById('fileChangeTypes').innerHTML = '<p class="loading">Loading file activity data...</p>';
+        document.getElementById('hotFiles').innerHTML = '<p class="loading">Loading hot files data...</p>';
+        document.getElementById('fileExtensions').innerHTML = '<p class="loading">Loading file extensions data...</p>';
+        
         // Load file changes and extensions data
         Promise.all([
             fetch(`/api/analytics/changes-by-type/${analysisKey}`).then(res => res.json()),
@@ -1106,17 +2573,72 @@
             fetch(`/api/analytics/hot-files/${analysisKey}`).then(res => res.json())
         ])
         .then(([changeTypes, fileExtensions, hotFiles]) => {
-            renderFileChangeTypes(changeTypes);
-            renderFileExtensions(fileExtensions);
-            renderHotFiles(hotFiles);
+            // Cache original data
+            originalData.fileChangeTypes = [...changeTypes];
+            originalData.fileExtensions = [...fileExtensions];
+            originalData.hotFiles = [...hotFiles];
+            
+            // Apply filters to hot files
+            initFilters();
+            if (filters[analysisKey].files.length > 0) {
+                filteredData.hotFiles = hotFiles.filter(file => {
+                    return !filters[analysisKey].files.some(pattern => 
+                        file.filename.includes(pattern));
+                });
+            } else {
+                filteredData.hotFiles = [...hotFiles];
+            }
+            
+            // Change types and extensions are kept as is
+            filteredData.fileChangeTypes = [...changeTypes];
+            filteredData.fileExtensions = [...fileExtensions];
+            
+            // Render with filtered data
+            renderFileChangeTypes(filteredData.fileChangeTypes);
+            renderFileExtensions(filteredData.fileExtensions);
+            renderHotFiles(filteredData.hotFiles);
         })
         .catch(error => {
             console.error('Error loading file activity data:', error);
+            document.getElementById('fileChangeTypes').innerHTML = 
+                '<p class="error">Error loading file activity data.</p>';
+            document.getElementById('hotFiles').innerHTML = 
+                '<p class="error">Error loading hot files data.</p>';
+            document.getElementById('fileExtensions').innerHTML = 
+                '<p class="error">Error loading file extensions data.</p>';
         });
     }
     
     // Function to load PR metrics and commit activity data
-    function loadPRMetricsData() {
+    function loadPRMetricsData(forceReload = false) {
+        // Skip if already loaded and not forcing reload
+        if (!forceReload && 
+            document.querySelector('#commitActivity svg') && 
+            document.querySelector('#commitTypes svg') && 
+            document.querySelector('#prTimeByMonth .chart-container')) {
+            return;
+        }
+        
+        // Use cached data if available and not forced to reload
+        if (!forceReload && 
+            filteredData.commitsByDay && 
+            filteredData.prLifecycle && 
+            filteredData.prTimeByMonth && 
+            filteredData.commitTypes) {
+            
+            renderCommitActivity(filteredData.commitsByDay);
+            renderPRLifecycle(filteredData.prLifecycle);
+            renderPRTimeByMonth(filteredData.prTimeByMonth);
+            renderCommitTypes(filteredData.commitTypes);
+            return;
+        }
+        
+        // Show loading states
+        document.getElementById('commitActivity').innerHTML = '<p class="loading">Loading commit activity data...</p>';
+        document.getElementById('commitTypes').innerHTML = '<p class="loading">Loading commit types data...</p>';
+        document.getElementById('prTimeByMonth').innerHTML = '<p class="loading">Loading PR metrics data...</p>';
+        document.getElementById('prLifecycle').innerHTML = '<p class="loading">Loading PR lifecycle data...</p>';
+        
         // Load PR lifecycle and commit activity data
         Promise.all([
             fetch(`/api/analytics/commits-by-day/${analysisKey}`).then(res => res.json()),
@@ -1125,13 +2647,54 @@
             fetch(`/api/analytics/commit-types/${analysisKey}`).then(res => res.json())
         ])
         .then(([commitsByDay, prLifecycle, prTimeByMonth, commitTypes]) => {
-            renderCommitActivity(commitsByDay);
-            renderPRLifecycle(prLifecycle);
-            renderPRTimeByMonth(prTimeByMonth);
-            renderCommitTypes(commitTypes);
+            // Cache original data
+            originalData.commitsByDay = [...commitsByDay];
+            originalData.prLifecycle = [...prLifecycle];
+            originalData.prTimeByMonth = [...prTimeByMonth];
+            originalData.commitTypes = [...commitTypes];
+            
+            // Apply contributor filters
+            initFilters();
+            if (filters[analysisKey].contributors.length > 0) {
+                // Filter commit types by contributor
+                filteredData.commitTypes = commitTypes.filter(item => 
+                    !filters[analysisKey].contributors.includes(item.author));
+                
+                // Filter PR lifecycle data
+                filteredData.prLifecycle = prLifecycle.filter(pr => 
+                    !filters[analysisKey].contributors.includes(pr.created_by) && 
+                    !filters[analysisKey].contributors.includes(pr.merged_by));
+                
+                // Filter commits by day data
+                filteredData.commitsByDay = commitsByDay.filter(item => 
+                    !filters[analysisKey].contributors.includes(item.author));
+                
+                // PR time by month is aggregate data, keep as is
+                filteredData.prTimeByMonth = [...prTimeByMonth];
+            } else {
+                // No filters, use original data
+                filteredData.commitTypes = [...commitTypes];
+                filteredData.prLifecycle = [...prLifecycle];
+                filteredData.commitsByDay = [...commitsByDay];
+                filteredData.prTimeByMonth = [...prTimeByMonth];
+            }
+            
+            // Render with filtered data
+            renderCommitActivity(filteredData.commitsByDay);
+            renderPRLifecycle(filteredData.prLifecycle);
+            renderPRTimeByMonth(filteredData.prTimeByMonth);
+            renderCommitTypes(filteredData.commitTypes);
         })
         .catch(error => {
             console.error('Error loading PR metrics data:', error);
+            document.getElementById('commitActivity').innerHTML = 
+                '<p class="error">Error loading commit activity data.</p>';
+            document.getElementById('commitTypes').innerHTML = 
+                '<p class="error">Error loading commit types data.</p>';
+            document.getElementById('prTimeByMonth').innerHTML = 
+                '<p class="error">Error loading PR metrics data.</p>';
+            document.getElementById('prLifecycle').innerHTML = 
+                '<p class="error">Error loading PR lifecycle data.</p>';
         });
     }
     
@@ -1365,18 +2928,38 @@
     function renderCommitActivity(commitsByDay) {
         const container = document.getElementById('commitActivity');
         
-        // Group by date
+        // Group by date and author
         const dateGroups = {};
+        const authorCommitsByDate = {};
+        
         commitsByDay.forEach(item => {
+            // Process for overall date groups
             if (!dateGroups[item.date]) {
                 dateGroups[item.date] = 0;
             }
             dateGroups[item.date] += item.commit_count;
+            
+            // Process for author-specific tracking
+            if (!authorCommitsByDate[item.date]) {
+                authorCommitsByDate[item.date] = {};
+            }
+            
+            if (!authorCommitsByDate[item.date][item.author]) {
+                authorCommitsByDate[item.date][item.author] = 0;
+            }
+            
+            authorCommitsByDate[item.date][item.author] += item.commit_count;
         });
         
-        // Convert to array
+        // Convert to array with author breakdown
         const data = Object.entries(dateGroups)
-            .map(([date, count]) => ({date: new Date(date), count}))
+            .map(([date, count]) => {
+                return {
+                    date: new Date(date), 
+                    count,
+                    authorBreakdown: authorCommitsByDate[date] || {}
+                };
+            })
             .sort((a, b) => a.date - b.date);
             
         // Define dimensions
@@ -1446,12 +3029,63 @@
             .on("mouseover", function(event, d) {
                 const dateStr = d.date.toLocaleDateString();
                 
-                // Create tooltip
+                // Build tooltip content with improved author breakdown
+                let authorBreakdownHTML = '';
+                if (d.authorBreakdown) {
+                    const authorEntries = Object.entries(d.authorBreakdown).sort((a, b) => b[1] - a[1]);
+                    const totalAuthors = authorEntries.length;
+                    
+                    if (authorEntries.length > 0) {
+                        // Build author list with percentages
+                        authorBreakdownHTML = '';
+                        
+                        // Get all authors (no limit) with percentage bars
+                        authorEntries.forEach(([author, count], index) => {
+                            const percentage = Math.round((count / d.count) * 100);
+                            const barWidth = Math.max(percentage, 5); // Minimum width for visibility
+                            
+                            authorBreakdownHTML += `
+                                <div style="margin-bottom: ${index < totalAuthors-1 ? '5px' : '0'}; display: flex; flex-direction: column;">
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span>${author}</span>
+                                        <span>${count} (${percentage}%)</span>
+                                    </div>
+                                    <div style="background-color: #eee; height: 6px; border-radius: 3px; margin-top: 2px;">
+                                        <div style="background-color: ${index === 0 ? '#ff7f0e' : 'steelblue'}; width: ${barWidth}%; height: 6px; border-radius: 3px;"></div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                }
+                
+                // Create enhanced tooltip with better formatting
                 d3.select("#tooltip")
                     .style("left", (event.pageX + 10) + "px")
                     .style("top", (event.pageY - 10) + "px")
                     .style("display", "inline-block")
-                    .html(`<strong>${dateStr}</strong><br/>Commits: ${d.count}`);
+                    .html(`
+                        <div style="background-color: #f9f9f9; padding: 12px; border-radius: 4px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.2); min-width: 200px;">
+                            <div style="font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 6px; font-size: 14px;">
+                                ${dateStr}
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                <span style="background-color: steelblue; width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
+                                <strong>Commits:</strong> ${d.count}
+                            </div>
+                            ${authorBreakdownHTML ? `
+                                <div style="margin-top: 8px; border-top: 1px solid #eee; padding-top: 8px;">
+                                    <div style="font-weight: bold; margin-bottom: 5px;">Author Breakdown:</div>
+                                    <div style="max-height: 150px; overflow-y: auto;">
+                                        ${authorBreakdownHTML}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            <div style="font-size: 0.9em; color: #666; margin-top: 8px; font-style: italic; text-align: center;">
+                                Click to view detailed commit information
+                            </div>
+                        </div>
+                    `);
                     
                 // Highlight the point
                 d3.select(this)
@@ -1462,10 +3096,12 @@
                 // Hide tooltip
                 d3.select("#tooltip").style("display", "none");
                 
-                // Restore point appearance
-                d3.select(this)
-                    .attr("r", 5)
-                    .attr("fill", "steelblue");
+                // Only restore appearance if not highlighted by contributor filter
+                if (!this.classList.contains('highlighted')) {
+                    d3.select(this)
+                        .attr("r", 5)
+                        .attr("fill", "steelblue");
+                }
             });
             
         // Add zoom functionality
@@ -1749,7 +3385,7 @@
             .style("fill", "url(#legend-gradient)");
     }
     
-    // Render commit types visualization
+    // Render commit types visualization with enhanced tooltips and zoom functionality
     function renderCommitTypes(commitTypesData) {
         const container = document.getElementById('commitTypes');
         
@@ -1782,25 +3418,69 @@
             .attr("height", height + margin.top + margin.bottom)
             .append("g")
             .attr("transform", `translate(${margin.left}, ${margin.top})`);
+            
+        // Add clip path for zooming
+        svg.append("defs").append("clipPath")
+            .attr("id", "commit-types-clip")
+            .append("rect")
+            .attr("width", width)
+            .attr("height", height);
         
         // Convert data to stacked format
         const authors = Object.keys(authorGroups);
         const allTypes = Array.from(new Set(commitTypesData.map(d => d.type)));
         
-        // Prepare stacked data
+        // Prepare stacked data and calculate summary information
         const stackedData = [];
+        const authorSummary = {};
+        
         authors.forEach(author => {
             const authorData = { author };
+            let totalCommits = 0;
+            const typeBreakdown = {};
             
             // Initialize all types to 0
             allTypes.forEach(type => {
                 authorData[type] = 0;
+                typeBreakdown[type] = 0;
             });
             
             // Update with actual values
             authorGroups[author].forEach(item => {
                 authorData[item.type] = item.count;
+                typeBreakdown[item.type] = item.count;
+                totalCommits += item.count;
             });
+            
+            // Calculate percentages for each type
+            const typePercentages = {};
+            Object.keys(typeBreakdown).forEach(type => {
+                if (totalCommits > 0) {
+                    typePercentages[type] = (typeBreakdown[type] / totalCommits * 100).toFixed(1);
+                } else {
+                    typePercentages[type] = 0;
+                }
+            });
+            
+            // Find primary work type (highest count)
+            let primaryType = allTypes[0];
+            let maxCount = 0;
+            
+            allTypes.forEach(type => {
+                if (typeBreakdown[type] > maxCount) {
+                    maxCount = typeBreakdown[type];
+                    primaryType = type;
+                }
+            });
+            
+            // Store summary data for tooltips
+            authorSummary[author] = {
+                totalCommits,
+                typeBreakdown,
+                typePercentages,
+                primaryType,
+                primaryTypePercentage: typePercentages[primaryType]
+            };
             
             stackedData.push(authorData);
         });
@@ -1827,9 +3507,14 @@
         const y = d3.scaleLinear()
             .domain([0, d3.max(series, d => d3.max(d, d => d[1]))])
             .range([height, 0]);
+            
+        // Create a chart area group with clipping for zoom
+        const chartArea = svg.append("g")
+            .attr("clip-path", "url(#commit-types-clip)");
         
         // Add x axis
-        svg.append("g")
+        const xAxis = svg.append("g")
+            .attr("class", "x-axis")
             .attr("transform", `translate(0, ${height})`)
             .call(d3.axisBottom(x))
             .selectAll("text")
@@ -1838,7 +3523,8 @@
             .style("font-size", "10px");
         
         // Add y axis
-        svg.append("g")
+        const yAxis = svg.append("g")
+            .attr("class", "y-axis")
             .call(d3.axisLeft(y));
         
         // Add title
@@ -1849,7 +3535,7 @@
             .style("font-size", "16px")
             .text("Commit Types by Contributor");
         
-        // Add tooltip
+        // Add enhanced tooltip that shows a summary of all work types
         const tooltip = d3.select("body")
             .append("div")
             .attr("class", "tooltip")
@@ -1857,43 +3543,160 @@
             .style("position", "absolute")
             .style("background-color", "white")
             .style("border", "1px solid #ddd")
-            .style("padding", "10px")
+            .style("padding", "12px")
             .style("border-radius", "4px")
-            .style("pointer-events", "none");
+            .style("box-shadow", "0 2px 5px rgba(0,0,0,0.2)")
+            .style("pointer-events", "none")
+            .style("max-width", "250px");
         
-        // Add bars
-        svg.append("g")
-            .selectAll("g")
+        // Add author bars group - allows for mouse events on the entire stacked bar
+        const authorBars = chartArea.selectAll(".author-bar-group")
+            .data(stackedData)
+            .enter()
+            .append("g")
+            .attr("class", "author-bar-group")
+            .attr("transform", d => `translate(${x(d.author)}, 0)`)
+            .attr("data-author", d => d.author)
+            .style("cursor", "pointer")
+            .on("mouseover", function(event, d) {
+                const author = d.author;
+                const summary = authorSummary[author];
+                
+                // Highlight all sections of this author's bar
+                d3.selectAll(`.bar-section[data-author="${author}"]`)
+                    .style("stroke", "#333")
+                    .style("stroke-width", "1.5px")
+                    .classed("highlighted", true);
+                
+                // Build tooltip content with a nice table of data
+                let tooltipContent = `
+                    <div style="border-bottom: 1px solid #ddd; margin-bottom: 8px; padding-bottom: 5px;">
+                        <strong style="font-size: 14px;">${author}</strong>
+                        <div>Total Commits: ${summary.totalCommits}</div>
+                        <div style="color: #777;">Primary: ${summary.primaryType} (${summary.primaryTypePercentage}%)</div>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr style="border-bottom: 1px solid #eee; font-weight: bold;">
+                            <td style="padding: 3px;">Type</td>
+                            <td style="padding: 3px; text-align: center;">Count</td>
+                            <td style="padding: 3px; text-align: right;">%</td>
+                        </tr>
+                `;
+                
+                // Add a row for each work type
+                allTypes.forEach(type => {
+                    if (summary.typeBreakdown[type] > 0) {
+                        const typeColor = color(type);
+                        tooltipContent += `
+                            <tr style="border-bottom: 1px solid #f5f5f5;">
+                                <td style="padding: 3px;">
+                                    <span style="display: inline-block; width: 10px; height: 10px; background-color: ${typeColor}; margin-right: 5px;"></span>
+                                    ${type}
+                                </td>
+                                <td style="padding: 3px; text-align: center;">${summary.typeBreakdown[type]}</td>
+                                <td style="padding: 3px; text-align: right;">${summary.typePercentages[type]}%</td>
+                            </tr>
+                        `;
+                    }
+                });
+                
+                tooltipContent += `</table>`;
+                
+                // Show tooltip
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .95);
+                tooltip.html(tooltipContent)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 15) + "px");
+            })
+            .on("mouseout", function(event, d) {
+                // Remove highlighting if not already selected by the contributor filter
+                if (!document.getElementById('contributorFilter').value) {
+                    d3.selectAll(".bar-section")
+                        .style("stroke", "none")
+                        .classed("highlighted", false);
+                }
+                
+                // Hide tooltip
+                tooltip.transition()
+                    .duration(300)
+                    .style("opacity", 0);
+            });
+        
+        // Add bar sections for each type
+        chartArea.selectAll(".series-group")
             .data(series)
             .enter().append("g")
+            .attr("class", "series-group")
             .attr("fill", d => color(d.key))
             .selectAll("rect")
             .data(d => d)
             .enter().append("rect")
+            .attr("class", "bar-section")
+            .attr("data-author", d => d.data.author)
+            .attr("data-type", function(d) {
+                return this.parentNode.__data__.key;
+            })
             .attr("x", d => x(d.data.author))
             .attr("y", d => y(d[1]))
             .attr("height", d => y(d[0]) - y(d[1]))
             .attr("width", x.bandwidth())
             .on("mouseover", function(event, d) {
+                const author = d.data.author;
                 const type = this.parentNode.__data__.key;
                 const count = d[1] - d[0];
                 
+                // Highlight this section
+                d3.select(this)
+                    .style("stroke", "#333")
+                    .style("stroke-width", "1.5px")
+                    .classed("highlighted", true);
+                
+                // Show small tooltip for this specific section
                 tooltip.transition()
                     .duration(200)
                     .style("opacity", .9);
+                    
                 tooltip.html(`
-                    <strong>${d.data.author}</strong><br/>
-                    Type: ${type}<br/>
-                    Count: ${count}
+                    <div>
+                        <strong>${author}</strong><br/>
+                        Type: <strong>${type}</strong><br/>
+                        Count: ${count} commits
+                    </div>
                 `)
-                    .style("left", (event.pageX) + "px")
-                    .style("top", (event.pageY - 28) + "px");
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 15) + "px");
+                
+                // Stop event propagation to avoid triggering the parent group's event
+                event.stopPropagation();
             })
-            .on("mouseout", function() {
+            .on("mouseout", function(event, d) {
+                // Remove highlight if not already selected by the contributor filter
+                if (!document.getElementById('contributorFilter').value) {
+                    d3.select(this)
+                        .style("stroke", "none")
+                        .classed("highlighted", false);
+                }
+                
+                // Hide tooltip
                 tooltip.transition()
-                    .duration(500)
+                    .duration(300)
                     .style("opacity", 0);
+                
+                // Stop event propagation
+                event.stopPropagation();
+            })
+            .on("click", function(event, d) {
+                const author = d.data.author;
+                highlightContributor(author);
+                event.stopPropagation();
             });
+        
+        // Add click to highlight contributor
+        authorBars.on("click", function(event, d) {
+            highlightContributor(d.author);
+        });
         
         // Add legend
         const legend = svg.append("g")
@@ -1901,7 +3704,59 @@
             .selectAll("g")
             .data(allTypes)
             .enter().append("g")
-            .attr("transform", (d, i) => `translate(0, ${i * 20})`);
+            .attr("transform", (d, i) => `translate(0, ${i * 20})`)
+            .style("cursor", "pointer")
+            .on("mouseover", function(event, d) {
+                const type = d;
+                
+                // Highlight all sections of this type
+                d3.selectAll(`.bar-section[data-type="${type}"]`)
+                    .style("stroke", "#333")
+                    .style("stroke-width", "1.5px");
+                
+                // Highlight legend item
+                d3.select(this).select("rect")
+                    .style("stroke", "#333")
+                    .style("stroke-width", "1.5px");
+                    
+                // Show tooltip with type description
+                const typeDescriptions = {
+                    "feature": "New features and functionality additions",
+                    "bug": "Bug fixes and issue resolutions",
+                    "refactor": "Code improvements without changing functionality",
+                    "docs": "Documentation updates and improvements",
+                    "test": "Test additions and improvements",
+                    "chore": "Maintenance tasks, dependencies, tooling"
+                };
+                
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                tooltip.html(`
+                    <div>
+                        <strong>${type}</strong><br/>
+                        ${typeDescriptions[type] || "Commits of this type"}
+                    </div>
+                `)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 10) + "px");
+            })
+            .on("mouseout", function(event, d) {
+                // Remove highlighting from bars if not already selected by contributor filter
+                if (!document.getElementById('contributorFilter').value) {
+                    d3.selectAll(".bar-section")
+                        .style("stroke", "none");
+                }
+                
+                // Remove highlighting from legend
+                d3.select(this).select("rect")
+                    .style("stroke", "none");
+                
+                // Hide tooltip
+                tooltip.transition()
+                    .duration(300)
+                    .style("opacity", 0);
+            });
         
         legend.append("rect")
             .attr("width", 18)
@@ -1913,6 +3768,62 @@
             .attr("y", 9)
             .attr("dy", "0.35em")
             .text(d => d);
+            
+        // Add zoom functionality
+        const zoom = d3.zoom()
+            .scaleExtent([0.5, 5])  // Set the zoom extent
+            .extent([[0, 0], [width, height]])
+            .on("zoom", zoomed);
+            
+        // Create a transparent overlay for zoom handling
+        svg.append("rect")
+            .attr("width", width)
+            .attr("height", height)
+            .style("fill", "none")
+            .style("pointer-events", "all")
+            .call(zoom);
+            
+        // Add reset zoom button
+        svg.append("text")
+            .attr("x", width - 10)
+            .attr("y", 20)
+            .attr("text-anchor", "end")
+            .style("font-size", "12px")
+            .style("cursor", "pointer")
+            .style("fill", "#2196F3")
+            .text("Reset Zoom")
+            .on("click", function() {
+                svg.transition()
+                    .duration(750)
+                    .call(zoom.transform, d3.zoomIdentity);
+            });
+        
+        // Function to handle zoom event
+        function zoomed(event) {
+            // Get the new transform
+            const transform = event.transform;
+            
+            // Apply transforms to chart elements
+            chartArea.attr("transform", transform);
+            
+            // Update the axes
+            svg.select(".x-axis")
+                .attr("transform", `translate(${transform.x}, ${height * transform.k + transform.y})`)
+                .call(d3.axisBottom(x).scale(transform.rescaleX(x)));
+                
+            svg.select(".y-axis")
+                .attr("transform", `translate(${transform.x}, ${transform.y})`)
+                .call(d3.axisLeft(y).scale(transform.rescaleY(y)));
+        }
+            
+        // Add instruction text below the chart
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", height + 60)
+            .attr("text-anchor", "middle")
+            .style("font-size", "12px")
+            .style("fill", "#666")
+            .text("Hover on bars for details | Click on contributor to view profile | Zoom with mouse wheel");
     }
     
     // Function to show file changes for a specific commit

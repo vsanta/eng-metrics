@@ -364,7 +364,7 @@
 </script>
 
 <script>
-    // Function to render PR Time by Month chart
+    // Function to render PR Time by Month chart with detailed PR data display
     function renderPRTimeByMonth(prTimeData) {
         const container = document.getElementById('prTimeByMonth');
         
@@ -373,13 +373,30 @@
             return;
         }
         
+        // Create a container for the chart and PR details
+        container.innerHTML = `
+            <div style="display: flex; width: 100%;">
+                <div id="prMonthChart" style="flex: 3;"></div>
+                <div id="prMonthDetails" style="flex: 2; margin-left: 20px; padding: 10px; background: rgba(0,0,0,0.02); border-radius: 4px; min-height: 400px; overflow-y: auto;">
+                    <h3>PR Details</h3>
+                    <p class="empty-state">Click on a month to see PR details</p>
+                </div>
+            </div>
+        `;
+        
+        const chartContainer = document.getElementById('prMonthChart');
+        const detailsContainer = document.getElementById('prMonthDetails');
+        
+        // Track all PR data for detailed views
+        window.allPRData = {};
+        
         // Create a bar chart for PR time by month
         const margin = {top: 30, right: 30, bottom: 70, left: 60};
-        const width = 700 - margin.left - margin.right;
+        const width = 500 - margin.left - margin.right;
         const height = 400 - margin.top - margin.bottom;
         
         // Create SVG
-        const svg = d3.select(container)
+        const svg = d3.select(chartContainer)
             .append("svg")
             .attr("width", width + margin.left + margin.right)
             .attr("height", height + margin.top + margin.bottom)
@@ -434,23 +451,53 @@
             .attr("width", x.bandwidth())
             .attr("height", d => height - y(d.avg_hours))
             .attr("fill", d => color(d.pr_count))
+            .attr("cursor", "pointer")
             .on("mouseover", function(event, d) {
+                // Highlight bar on hover
+                d3.select(this)
+                    .attr("stroke", "#333")
+                    .attr("stroke-width", 2);
+                    
                 tooltip.transition()
                     .duration(200)
                     .style("opacity", .9);
                 tooltip.html(`
                     <strong>${d.month}</strong><br/>
                     Average Time: ${d.avg_hours.toFixed(1)} hours<br/>
-                    Number of PRs: ${d.pr_count}
+                    Number of PRs: ${d.pr_count}<br/>
+                    <em>Click for details</em>
                 `)
                     .style("left", (event.pageX) + "px")
                     .style("top", (event.pageY - 28) + "px");
             })
             .on("mouseout", function() {
+                d3.select(this)
+                    .attr("stroke", "none");
+                    
                 tooltip.transition()
                     .duration(500)
                     .style("opacity", 0);
+            })
+            .on("click", function(event, d) {
+                // Add active class to selected bar
+                svg.selectAll("rect").classed("active", false);
+                d3.select(this).classed("active", true)
+                    .attr("stroke", "#333")
+                    .attr("stroke-width", 2);
+                
+                // Load PR details for this month
+                loadPRDetailsForMonth(d.month);
             });
+        
+        // Add styles for active bar
+        const style = document.createElement('style');
+        style.textContent = `
+            rect.active { 
+                stroke: #333;
+                stroke-width: 2;
+            }
+        `;
+        document.head.appendChild(style);
         
         // Add title
         svg.append("text")
@@ -520,6 +567,121 @@
             .attr("dy", ".35em")
             .style("font-size", "12px")
             .text("Avg Hours");
+        
+        // Function to load PR details for a specific month
+        function loadPRDetailsForMonth(month) {
+            // Set loading state
+            detailsContainer.innerHTML = '<p>Loading PR details...</p>';
+            
+            // Check if we already have the data cached
+            if (window.allPRData[month]) {
+                renderPRDetails(month, window.allPRData[month]);
+                return;
+            }
+            
+            // Fetch PR lifecycle data for this analysis and filter by month
+            fetch(`/api/analytics/pr-lifecycle/${analysisKey}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Process PR data to calculate daily cycle time
+                    const prsForMonth = data.filter(pr => {
+                        const prMonth = new Date(pr.merged_timestamp).toISOString().slice(0, 7);
+                        return prMonth === month;
+                    });
+                    
+                    // Calculate daily times for PRs that weren't merged same day
+                    prsForMonth.forEach(pr => {
+                        const createDate = new Date(pr.created_timestamp);
+                        const mergeDate = new Date(pr.merged_timestamp);
+                        
+                        // Calculate time in days, hours, minutes
+                        const diffMs = mergeDate - createDate;
+                        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                        const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                        const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                        
+                        // Add formatted time details
+                        pr.sameDay = diffDays === 0;
+                        pr.timeInDays = diffDays;
+                        pr.timeInHours = diffHours;
+                        pr.timeInMinutes = diffMinutes;
+                        pr.formattedTime = diffDays > 0 
+                            ? `${diffDays}d ${diffHours}h ${diffMinutes}m`
+                            : `${diffHours}h ${diffMinutes}m`;
+                    });
+                    
+                    // Sort by time (longest first)
+                    prsForMonth.sort((a, b) => b.lifetime_minutes - a.lifetime_minutes);
+                    
+                    // Cache the data
+                    window.allPRData[month] = prsForMonth;
+                    
+                    // Render the details
+                    renderPRDetails(month, prsForMonth);
+                })
+                .catch(error => {
+                    console.error("Error loading PR details:", error);
+                    detailsContainer.innerHTML = '<p class="error">Error loading PR details</p>';
+                });
+        }
+        
+        // Function to render PR details in the side panel
+        function renderPRDetails(month, prs) {
+            if (!prs || prs.length === 0) {
+                detailsContainer.innerHTML = `<h3>PRs for ${month}</h3><p>No PR data available for this month.</p>`;
+                return;
+            }
+            
+            // Create summary statistics
+            const totalPRs = prs.length;
+            const sameDayPRs = prs.filter(pr => pr.sameDay).length;
+            const avgTimeHours = prs.reduce((sum, pr) => sum + (pr.lifetime_minutes / 60), 0) / totalPRs;
+            const maxTimeHours = Math.max(...prs.map(pr => pr.lifetime_minutes / 60));
+            
+            // Create HTML content
+            let html = `
+                <h3>PRs for ${month}</h3>
+                <div class="pr-statistics" style="margin-bottom: 15px; background: #f5f5f5; padding: 10px; border-radius: 4px;">
+                    <div><strong>Total PRs:</strong> ${totalPRs}</div>
+                    <div><strong>Same-day PRs:</strong> ${sameDayPRs} (${Math.round(sameDayPRs/totalPRs*100)}%)</div>
+                    <div><strong>Avg Time:</strong> ${avgTimeHours.toFixed(1)} hours</div>
+                    <div><strong>Max Time:</strong> ${maxTimeHours.toFixed(1)} hours</div>
+                </div>
+                <div class="pr-list">
+            `;
+            
+            // Add each PR
+            prs.forEach((pr, index) => {
+                // Calculate a color based on time (green for fast, red for slow)
+                const colorScale = d3.scaleLinear()
+                    .domain([0, maxTimeHours])
+                    .range(["#4CAF50", "#F44336"]);
+                
+                const hours = pr.lifetime_minutes / 60;
+                const color = colorScale(hours);
+                
+                html += `
+                    <div class="pr-item" style="margin-bottom: 10px; padding: 8px; border-left: 4px solid ${color}; background: rgba(0,0,0,0.02);">
+                        <div style="font-weight: bold;">${pr.branch_name}</div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Author: <strong>${pr.created_by}</strong></span>
+                            <span>Merged by: <strong>${pr.merged_by}</strong></span>
+                        </div>
+                        <div style="display: flex; align-items: center; margin-top: 5px;">
+                            <div style="flex: 1;">
+                                ${new Date(pr.created_timestamp).toLocaleDateString()} → ${new Date(pr.merged_timestamp).toLocaleDateString()}
+                            </div>
+                            <div style="font-weight: bold; color: ${color};">
+                                ${pr.formattedTime}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+            detailsContainer.innerHTML = html;
+        }
     }
 
 </script>

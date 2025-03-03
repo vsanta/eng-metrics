@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>Engineering Metrics</title>
-    <!-- Include D3.js -->
+    <!-- Include D3.js and D3-zoom -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Include Chart.js for better zoom support -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -216,7 +219,8 @@
             <h1><%= analysisDetails.label %> Engineering Metrics</h1>
             <p>
                 <strong>Path:</strong> <%= analysisDetails.local_path %> | 
-                <strong>Period:</strong> <%= analysisDetails.since_date %> to present | 
+                <strong>Period:</strong> <%= analysisDetails.start_date || analysisDetails.since_date || 'unknown' %> 
+                to <%= analysisDetails.end_date || 'present' %> | 
                 <strong>Generated:</strong> <%= new Date(analysisDetails.created_at).toLocaleString() %>
             </p>
         </div>
@@ -267,7 +271,7 @@
     <div class="metrics-grid">
         <!-- Top Contributors Card -->
         <div class="card">
-            <h2>Top Contributors by Influence</h2>
+            <h2>Contributors by Influence</h2>
             <p>Influence score combines creating files that others modify with editing activity.</p>
             <ul class="contributor-list">
                 <% topInfluencers.slice(0, 10).forEach(influencer => { %>
@@ -283,17 +287,13 @@
             </ul>
         </div>
         
-        <!-- Top Creators Card -->
+        <!-- Work Type by Contributor Card -->
         <div class="card">
-            <h2>Top File Creators</h2>
-            <p>Contributors who create the most new files.</p>
-            <ul class="contributor-list">
-                <% topCreators.slice(0, 10).forEach(creator => { %>
-                    <li onclick="fetchContributorDetails('<%= creator.author %>')">
-                        <strong><%= creator.author %></strong> – Creates: <%= creator.creates %>
-                    </li>
-                <% }); %>
-            </ul>
+            <h2>Work Type by Contributor</h2>
+            <p>Shows how different contributors focus on various types of work.</p>
+            <div class="chart-container">
+                <div id="commitTypes"></div>
+            </div>
         </div>
         
         <!-- Commit Activity Card -->
@@ -322,7 +322,6 @@
                 <button class="tablinks active" onclick="openTab(event, 'commitsTab')">Commits</button>
                 <button class="tablinks" onclick="openTab(event, 'prLifecycleTab')">PR Lifecycle</button>
                 <button class="tablinks" onclick="openTab(event, 'fileExtensionsTab')">File Extensions</button>
-                <button class="tablinks" onclick="openTab(event, 'commitTypesTab')">Work Types</button>
             </div>
             
             <div id="commitsTab" class="tabcontent active">
@@ -339,11 +338,6 @@
             <div id="fileExtensionsTab" class="tabcontent">
                 <h3>File Extensions</h3>
                 <div id="fileExtensions"></div>
-            </div>
-            
-            <div id="commitTypesTab" class="tabcontent">
-                <h3>Work Type by Contributor</h3>
-                <div id="commitTypes"></div>
             </div>
         </div>
     </div>
@@ -557,16 +551,18 @@
         evt.currentTarget.classList.add("active");
     }
 
-    // Scatter Plot Visualization
+    // Scatter Plot Visualization with Zoom
     const width = 600, height = 400;
     const margin = { top: 50, right: 50, bottom: 50, left: 50 };
 
+    // Create SVG element
     const svg = d3.select("#contributorScatterPlot")
         .append("svg")
         .attr("width", width)
-        .attr("height", height);
+        .attr("height", height)
+        .append("g");  // Add a group for all elements for easier zooming
 
-    // Scales: x for creates, y for edits.
+    // Define the scales
     const xScale = d3.scaleLinear()
         .domain([0, d3.max(dataPoints, d => d.creates) + 5])
         .range([margin.left, width - margin.right]);
@@ -575,12 +571,25 @@
         .domain([0, d3.max(dataPoints, d => d.edits) + 5])
         .range([height - margin.bottom, margin.top]);
 
+    // Create clip path to prevent points from rendering outside the chart area
+    svg.append("defs").append("clipPath")
+        .attr("id", "clip")
+        .append("rect")
+        .attr("width", width - margin.left - margin.right)
+        .attr("height", height - margin.top - margin.bottom)
+        .attr("x", margin.left)
+        .attr("y", margin.top);
+
+    // Create chart area with clipping
+    const chartArea = svg.append("g")
+        .attr("clip-path", "url(#clip)");
+
     // X-axis (File Creations)
-    const xAxis = d3.axisBottom(xScale);
-    svg.append("g")
+    const xAxisGroup = svg.append("g")
         .attr("transform", `translate(0, ${height - margin.bottom})`)
-        .call(xAxis)
-        .append("text")
+        .call(d3.axisBottom(xScale));
+
+    xAxisGroup.append("text")
         .attr("x", width - margin.right)
         .attr("y", -10)
         .attr("fill", "#000")
@@ -588,11 +597,11 @@
         .text("File Creations");
 
     // Y-axis (File Edits)
-    const yAxis = d3.axisLeft(yScale);
-    svg.append("g")
+    const yAxisGroup = svg.append("g")
         .attr("transform", `translate(${margin.left}, 0)`)
-        .call(yAxis)
-        .append("text")
+        .call(d3.axisLeft(yScale));
+
+    yAxisGroup.append("text")
         .attr("transform", "rotate(-90)")
         .attr("x", -margin.top)
         .attr("y", 15)
@@ -603,11 +612,12 @@
     // Tooltip for hover effect
     const tooltip = d3.select("#tooltip");
 
-    // Plot data points with click handler to load contributor details
-    svg.selectAll("circle")
+    // Add the scatter plot points
+    const dots = chartArea.selectAll(".dot")
         .data(dataPoints)
         .enter()
         .append("circle")
+        .attr("class", "dot")
         .attr("cx", d => xScale(d.creates))
         .attr("cy", d => yScale(d.edits))
         .attr("r", 8)
@@ -622,16 +632,52 @@
             tooltip.style("display", "none");
         })
         .on("click", function(event, d) {
-            // Include the analysisKey in the query parameter
-            fetch(`/api/contributor/${encodeURIComponent(d.author)}?analysisKey=${encodeURIComponent(analysisKey)}`)
-                .then(response => response.json())
-                .then(details => {
-                    showSidePanel(details);
-                })
-                .catch(err => {
-                    console.error('Error fetching contributor details:', err);
-                });
+            fetchContributorDetails(d.author);
         });
+
+    // Add zoom functionality
+    const zoom = d3.zoom()
+        .scaleExtent([0.5, 20])  // Set the zoom extent
+        .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]])
+        .on("zoom", zoomed);
+
+    // Apply zoom to the SVG
+    svg.append("rect")
+        .attr("width", width)
+        .attr("height", height)
+        .style("fill", "none")
+        .style("pointer-events", "all")
+        .call(zoom);
+
+    // Add reset zoom button
+    svg.append("text")
+        .attr("x", width - margin.right)
+        .attr("y", margin.top / 2)
+        .attr("text-anchor", "end")
+        .style("font-size", "12px")
+        .style("cursor", "pointer")
+        .style("fill", "#2196F3")
+        .text("Reset Zoom")
+        .on("click", function() {
+            svg.transition()
+                .duration(750)
+                .call(zoom.transform, d3.zoomIdentity);
+        });
+
+    // Function to handle zoom event
+    function zoomed(event) {
+        // Update the transform of all elements
+        const newX = event.transform.rescaleX(xScale);
+        const newY = event.transform.rescaleY(yScale);
+        
+        // Update axes
+        xAxisGroup.call(d3.axisBottom(newX));
+        yAxisGroup.call(d3.axisLeft(newY));
+        
+        // Update dots
+        dots.attr("cx", d => newX(d.creates))
+            .attr("cy", d => newY(d.edits));
+    }
 
     // Function to show side panel with contributor details
     function showSidePanel(details) {
@@ -700,14 +746,54 @@
                 window.dispatchEvent(new Event('resize'));
             });
         });
+        
+        // Activate tooltips for all charts
+        activateTooltips();
     });
     
     // Function to initialize all visualizations
     function initVisualizations() {
-        createNetworkGraph();
-        loadCommitsData();
-        loadFileActivityData();
-        loadPRMetricsData();
+        try {
+            createNetworkGraph();
+            loadCommitsData();
+            loadFileActivityData();
+            loadPRMetricsData();
+            // Remove the undefined function call that's causing errors
+            // renderWorkTypesByContributor(); 
+        } catch (error) {
+            console.error("Error initializing visualizations:", error);
+            // Show a helpful error message on the page
+            document.querySelectorAll('.chart-container').forEach(container => {
+                container.innerHTML = `<div class="error-message" style="color: #d9534f; padding: 20px; text-align: center;">
+                    <h3>Error Loading Chart</h3>
+                    <p>There was a problem loading this visualization. This might be due to missing or insufficient data.</p>
+                    <p>Error details: ${error.message}</p>
+                </div>`;
+            });
+        }
+    }
+    
+    // Activate tooltips for better information
+    function activateTooltips() {
+        document.querySelectorAll('.chart-container [data-tooltip]').forEach(element => {
+            element.addEventListener('mouseover', showTooltip);
+            element.addEventListener('mouseout', hideTooltip);
+        });
+    }
+    
+    function showTooltip(event) {
+        const tooltipText = event.target.getAttribute('data-tooltip');
+        if (!tooltipText) return;
+        
+        d3.select("#tooltip")
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 10) + "px")
+            .style("display", "inline-block")
+            .html(tooltipText);
+    }
+    
+    function hideTooltip() {
+        d3.select("#tooltip").style("display", "none");
     }
 
     function createNetworkGraph() {
@@ -1144,6 +1230,17 @@
             .append("g")
             .attr("transform", `translate(${margin.left}, ${margin.top})`);
             
+        // Add clip path for zooming
+        svg.append("defs").append("clipPath")
+            .attr("id", "commit-clip")
+            .append("rect")
+            .attr("width", width)
+            .attr("height", height);
+            
+        // Add a group with clipping for the data elements
+        const chartArea = svg.append("g")
+            .attr("clip-path", "url(#commit-clip)");
+            
         // X scale (time)
         const x = d3.scaleTime()
             .domain(d3.extent(data, d => d.date))
@@ -1155,16 +1252,16 @@
             .range([height, 0]);
             
         // Add X axis
-        svg.append("g")
+        const xAxis = svg.append("g")
             .attr("transform", `translate(0, ${height})`)
             .call(d3.axisBottom(x));
             
         // Add Y axis
-        svg.append("g")
+        const yAxis = svg.append("g")
             .call(d3.axisLeft(y));
             
         // Add the line
-        svg.append("path")
+        const line = chartArea.append("path")
             .datum(data)
             .attr("fill", "none")
             .attr("stroke", "steelblue")
@@ -1174,15 +1271,91 @@
                 .y(d => y(d.count))
             );
             
-        // Add points
-        svg.selectAll("circle")
+        // Add points with tooltips
+        const points = chartArea.selectAll(".commit-point")
             .data(data)
             .enter()
             .append("circle")
+            .attr("class", "commit-point")
             .attr("cx", d => x(d.date))
             .attr("cy", d => y(d.count))
             .attr("r", 5)
-            .attr("fill", "steelblue");
+            .attr("fill", "steelblue")
+            .on("mouseover", function(event, d) {
+                const dateStr = d.date.toLocaleDateString();
+                
+                // Create tooltip
+                d3.select("#tooltip")
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 10) + "px")
+                    .style("display", "inline-block")
+                    .html(`<strong>${dateStr}</strong><br/>Commits: ${d.count}`);
+                    
+                // Highlight the point
+                d3.select(this)
+                    .attr("r", 8)
+                    .attr("fill", "#ff7f0e");
+            })
+            .on("mouseout", function() {
+                // Hide tooltip
+                d3.select("#tooltip").style("display", "none");
+                
+                // Restore point appearance
+                d3.select(this)
+                    .attr("r", 5)
+                    .attr("fill", "steelblue");
+            });
+            
+        // Add zoom functionality
+        const zoom = d3.zoom()
+            .scaleExtent([0.5, 20])
+            .extent([[0, 0], [width, height]])
+            .on("zoom", zoomed);
+            
+        // Add transparent rect to capture zoom events
+        svg.append("rect")
+            .attr("width", width)
+            .attr("height", height)
+            .style("fill", "none")
+            .style("pointer-events", "all")
+            .call(zoom);
+            
+        // Add reset zoom button
+        svg.append("text")
+            .attr("x", width - 10)
+            .attr("y", 20)
+            .attr("text-anchor", "end")
+            .style("font-size", "12px")
+            .style("cursor", "pointer")
+            .style("fill", "#2196F3")
+            .text("Reset Zoom")
+            .on("click", function() {
+                svg.transition()
+                    .duration(750)
+                    .call(zoom.transform, d3.zoomIdentity);
+            });
+            
+        // Zoom handler function
+        function zoomed(event) {
+            // Get new scales
+            const newX = event.transform.rescaleX(x);
+            const newY = event.transform.rescaleY(y);
+            
+            // Update axes
+            xAxis.call(d3.axisBottom(newX));
+            yAxis.call(d3.axisLeft(newY));
+            
+            // Update line
+            line.attr("d", d3.line()
+                .x(d => newX(d.date))
+                .y(d => newY(d.count))
+            );
+            
+            // Update points
+            points
+                .attr("cx", d => newX(d.date))
+                .attr("cy", d => newY(d.count));
+        }
     }
     
     // Render PR lifecycle visualization

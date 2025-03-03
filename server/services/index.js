@@ -7,33 +7,68 @@ const path = require('path');
 const db = require('../db');
 
 function runCommand(cmd, cwd) {
+    console.log(`Running command in ${cwd}: ${cmd}`);
     return new Promise((resolve, reject) => {
-        exec(cmd, { cwd, shell: true,  maxBuffer: 1024 * 1024 * 10  }, (error, stdout, stderr) => {
+        exec(cmd, { cwd, shell: true, maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
             if (error) {
+                console.error(`Command error (${cwd}): ${error.message}`);
+                if (stderr) {
+                    console.error(`Command stderr: ${stderr}`);
+                }
                 return resolve(''); // return empty string on error
             }
+            
+            // Truncate output for logging if it's too long
+            const outputPreview = stdout.length > 200 ? 
+                stdout.substring(0, 200) + '... [output truncated]' : 
+                stdout;
+            console.log(`Command output (${cwd}): ${outputPreview}`);
+            
             resolve(stdout);
         });
     });
 }
 
 function findRepositories(startDir) {
+    console.log(`Finding repositories in ${startDir}...`);
     let repositories = [];
+    
+    // Check if the directory exists
+    if (!fs.existsSync(startDir)) {
+        console.error(`Directory does not exist: ${startDir}`);
+        return repositories;
+    }
+    
     // Check if startDir itself is a git repo
     if (fs.existsSync(path.join(startDir, '.git'))) {
+        console.log(`Found git repository: ${startDir}`);
         repositories.push(startDir);
     }
+    
     // Look for child directories that are git repositories
     try {
-        fs.readdirSync(startDir).forEach((item) => {
-            const childPath = path.join(startDir, item);
-            if (fs.statSync(childPath).isDirectory() && fs.existsSync(path.join(childPath, '.git'))) {
-                repositories.push(childPath);
+        const items = fs.readdirSync(startDir);
+        console.log(`Found ${items.length} items in ${startDir}`);
+        
+        items.forEach((item) => {
+            try {
+                const childPath = path.join(startDir, item);
+                const isDir = fs.statSync(childPath).isDirectory();
+                const isGitRepo = isDir && fs.existsSync(path.join(childPath, '.git'));
+                
+                if (isGitRepo) {
+                    console.log(`Found git repository: ${childPath}`);
+                    repositories.push(childPath);
+                }
+            } catch (itemErr) {
+                console.error(`Error accessing ${path.join(startDir, item)}:`, itemErr);
             }
         });
     } catch (err) {
-        console.error(`Permission denied when accessing ${startDir}`, err);
+        console.error(`Error reading directory ${startDir}:`, err);
     }
+    
+    console.log(`Found ${repositories.length} repositories in ${startDir}`);
     return repositories;
 }
 
@@ -108,6 +143,8 @@ async function analyzeAllRepositories(localPath, startDate, endDate, label) {
         console.error('Error storing analysis metadata:', error);
         // Continue anyway - this shouldn't block the analysis
     }
+    
+    console.log(`Analysis ${analysisKey} for "${label}" started - scanning repos from ${formattedStartDate} to ${formattedEndDate}`)
 
     const repos = findRepositories(localPath);
     let totalCreates = 0, totalEdits = 0;
@@ -127,9 +164,23 @@ async function analyzeAllRepositories(localPath, startDate, endDate, label) {
 }
 
 
-async function analyzeRepository(repoPath, sinceDate, analysisKey) {
+async function analyzeRepository(repoPath, startDate, analysisKey, endDate = null) {
     const repoName = path.basename(repoPath);
-    console.log(`Analyzing repository: ${repoName} at ${repoPath} key ${analysisKey}`);
+    const dateRange = endDate ? `from ${startDate} to ${endDate}` : `since ${startDate}`;
+    console.log(`Analyzing repository: ${repoName} at ${repoPath} ${dateRange} with key ${analysisKey}`);
+    
+    // Verify this is a valid git repository before proceeding
+    try {
+        const gitCheck = await runCommand('git rev-parse --is-inside-work-tree', repoPath);
+        if (!gitCheck.trim() || gitCheck.trim() !== 'true') {
+            console.error(`Not a valid git repository: ${repoPath}`);
+            return { creates: 0, edits: 0 };
+        }
+        console.log(`Confirmed valid git repository: ${repoPath}`);
+    } catch (error) {
+        console.error(`Error validating git repository ${repoPath}:`, error);
+        return { creates: 0, edits: 0 };
+    }
 
     // Check if repository record already exists for this analysisKey
     try {
@@ -151,28 +202,33 @@ async function analyzeRepository(repoPath, sinceDate, analysisKey) {
         // Continue anyway - we don't want to fail the entire analysis if this fails
     }
 
-    // Run git commands as before
-    const sinceOption = sinceDate ? `--since='${sinceDate}'` : '';
-    let output = await runCommand(`git log ${sinceOption} --pretty=format:'%H' -n 1`, repoPath);
+    // Construct git date range options
+    let dateOptions = startDate ? `--since='${startDate}'` : '';
+    if (endDate) {
+        dateOptions += ` --until='${endDate}'`;
+    }
+
+    // Run git commands
+    let output = await runCommand(`git log ${dateOptions} --pretty=format:'%H' -n 1`, repoPath);
 
     if (!output.trim()) {
-        console.log(`No commits found in ${repoName} ${sinceDate ? 'since ' + sinceDate : ''}`);
+        console.log(`No commits found in ${repoName} ${dateRange}`);
         return { creates: 0, edits: 0 };
     }
 
     // Get branch information
-    await analyzeBranches(repoPath, repoName, sinceDate, analysisKey);
+    await analyzeBranches(repoPath, repoName, startDate, analysisKey, endDate);
 
     // Get more detailed git log with all the data we want to store
     // Format: commit hash, author name, timestamp, and commit message
     const detailedLogOutput = await runCommand(
-        `git log ${sinceOption} --pretty=format:'COMMIT%n%H|%an|%at|%s'`, 
+        `git log ${dateOptions} --pretty=format:'COMMIT%n%H|%an|%at|%s'`, 
         repoPath
     );
     
     // Get file changes with commit hash
     const fileChangesOutput = await runCommand(
-        `git log ${sinceOption} --name-status --pretty=format:'COMMIT %H'`, 
+        `git log ${dateOptions} --name-status --pretty=format:'COMMIT %H'`, 
         repoPath
     );
 
@@ -265,7 +321,7 @@ async function analyzeRepository(repoPath, sinceDate, analysisKey) {
     }
 
     // Original analysis code for the existing metrics
-    output = await runCommand(`git log ${sinceOption} --name-status --pretty=format:'COMMIT%n%H %an'`, repoPath);
+    output = await runCommand(`git log ${dateOptions} --name-status --pretty=format:'COMMIT%n%H %an'`, repoPath);
     if (!output) {
         console.log(`No data found in repository ${repoName}`);
         return { creates: 0, edits: 0 };
@@ -385,16 +441,21 @@ async function getContributors(analysisKey) {
     }
 }
 /**
- * Generates a unique key for an analysis run, based on the local path and the number of years being analyzed.
- * The key is a hexadecimal MD5 hash of the string "<localPath>-<years>-<current time in ms>".
+ * Generates a unique key for an analysis run, based on the local path and date range.
+ * The key is a hexadecimal MD5 hash of the string "<localPath>-<startDate>-<endDate>-<current time in ms>".
  * @param {string} localPath - The local path being analyzed.
- * @param {number} years - The number of years being analyzed.
+ * @param {string} startDate - The start date of the analysis period.
+ * @param {string} endDate - The end date of the analysis period.
  * @returns {string} A unique key for the analysis run.
  */
-function generateAnalysisKey(localPath, years) {
+function generateAnalysisKey(localPath, startDate, endDate) {
+    // Format dates consistently to avoid issues
+    const formattedStartDate = startDate ? new Date(startDate).toISOString().slice(0, 10) : '';
+    const formattedEndDate = endDate ? new Date(endDate).toISOString().slice(0, 10) : '';
+    
     return crypto
         .createHash('md5')
-        .update(`${localPath}-${years}-${Date.now()}`)
+        .update(`${localPath}-${formattedStartDate}-${formattedEndDate}-${Date.now()}`)
         .digest('hex');
 }
 async function getTopCreators(analysisKey) {
@@ -550,7 +611,7 @@ async function getFileExtensions(analysisKey) {
 }
 
 // Analyze branch information (PRs, branch lifecycle)
-async function analyzeBranches(repoPath, repoName, sinceDate, analysisKey) {
+async function analyzeBranches(repoPath, repoName, startDate, analysisKey, endDate = null) {
     try {
         console.log(`Analyzing branches for ${repoName}...`);
         
@@ -562,10 +623,18 @@ async function analyzeBranches(repoPath, repoName, sinceDate, analysisKey) {
         }
         console.log(`Detected main branch: ${mainBranch}`);
         
+        // Construct git date range options
+        let dateOptions = startDate ? `--since='${startDate}'` : '';
+        if (endDate) {
+            dateOptions += ` --until='${endDate}'`;
+        }
+        
         // Find all merge commits to the main branch
-        const sinceOption = sinceDate ? `--since='${sinceDate}'` : '';
+        // Look for both merges and pull request patterns in commit messages to catch more PRs
+        // Use grep -E with a case-insensitive search and more patterns
+        // The || true prevents a failure if grep doesn't find anything
         const mergeCommits = await runCommand(
-            `git log ${sinceOption} --merges --first-parent ${mainBranch} --pretty=format:"%H|%P|%an|%aI|%s"`, 
+            `git log ${dateOptions} --first-parent ${mainBranch} --pretty=format:"%H|%P|%an|%aI|%s" | grep -iE "(merge|pull request|pr |pr#|pr:| pr | pr|branch)" || true`, 
             repoPath
         );
         
@@ -577,29 +646,55 @@ async function analyzeBranches(repoPath, repoName, sinceDate, analysisKey) {
         const merges = mergeCommits.split('\n').filter(Boolean);
         console.log(`Found ${merges.length} merge commits in ${repoName}`);
         
+        // Log for debugging PR detection
+        if (merges.length <= 5) {
+            console.log(`Merge commits in ${repoName}:`, merges.map(m => m.split('|').slice(-1)[0]));
+        }
+        
         for (const merge of merges) {
             // Parse merge commit data
             const [mergeHash, parents, merger, mergeDate, message] = merge.split('|');
             
-            // Extract branch name from merge message
-            // Usually in format "Merge branch 'feature/x' into main" or "Merge pull request #X from branch"
+            // Extract branch name from merge message - more comprehensive patterns
+            // Handle various formats:
+            // - "Merge branch 'feature/x' into main"
+            // - "Merge pull request #X from branch"
+            // - "Merge pull request #X"
+            // - "PR: feature description"
+            // - "Merge feature-branch" 
             const branchNameMatch = message.match(/branch ['"]([^'"]+)['"]/i) || 
                                     message.match(/from ([^/\s]+\/[^\s]+)/i) ||
-                                    message.match(/pull request #\d+ from ([^\s]+)/i);
+                                    message.match(/pull request #\d+ from ([^\s]+)/i) ||
+                                    message.match(/merge ([^: ]+) into/i) ||
+                                    message.match(/merge pull request #\d+ `(.+)`/i) ||
+                                    message.match(/merge (?:branch |)([^ ]+)/i);
             
             let branchName = branchNameMatch ? branchNameMatch[1] : `unknown-${mergeHash.substring(0, 7)}`;
             
-            // Get the commit hash of the branch head (second parent in the merge commit)
+            // Get the commit hash of the branch head (second parent in the merge commit if it exists)
             const parentHashes = parents.split(' ');
-            if (parentHashes.length < 2) continue; // Not a real merge
+            let branchHead;
             
-            const branchHead = parentHashes[1];
+            if (parentHashes.length >= 2) {
+                // This is a merge commit with two parents
+                branchHead = parentHashes[1];
+            } else {
+                // This might be a squash-and-merge or a fast-forward merge
+                // Let's use the commit itself
+                branchHead = mergeHash;
+                
+                // Also log this for debugging
+                console.log(`Possible squash merge detected: ${message}`);
+            }
             
-            // Find the first commit of the branch
-            // This is an approximation - we find the first commit reachable from branch head
-            // but not from the main branch parent
+            // Find the first commit of the branch or related commits
+            // For merge commits, find first commit reachable from branch head but not from main branch
+            // For squash merges, look back a reasonable number of commits to find branch start
             const branchFirstCommit = await runCommand(
-                `git rev-list ${branchHead} --not ${parentHashes[0]} --topo-order --reverse | head -1`, 
+                parentHashes.length >= 2 ?
+                    `git rev-list ${branchHead} --not ${parentHashes[0]} --topo-order --reverse | head -1` :
+                    // For squash merges, look at commit message for PR number and try to find related commits
+                    `git log ${branchHead}~10..${branchHead} --pretty=format:"%H" | tail -1`,
                 repoPath
             );
             
@@ -692,6 +787,9 @@ function classifyCommitType(message) {
 // Get PR lifecycle metrics
 async function getPRLifecycle(analysisKey) {
     console.log(`Getting PR lifecycle data for analysis key: ${analysisKey}`);
+    
+    // Use date_diff function instead of julian day calculations
+    // This is more compatible across DuckDB versions
     const query = `
     SELECT 
         name as branch_name,
@@ -699,24 +797,43 @@ async function getPRLifecycle(analysisKey) {
         merged_by,
         created_timestamp,
         merged_timestamp,
-        CAST((JULIAN(merged_timestamp) - JULIAN(created_timestamp)) * 24 * 60 AS INTEGER) as lifetime_minutes
+        CAST(DATE_DIFF('minute', created_timestamp, merged_timestamp) AS INTEGER) as lifetime_minutes
     FROM branches
     WHERE analysis_key = ?
       AND merged_timestamp IS NOT NULL
     ORDER BY lifetime_minutes DESC
     `;
     
-    return await db.getQuery(query, [analysisKey]);
+    console.log(`Using DATE_DIFF function for date calculations`);
+    try {
+        const results = await db.getQuery(query, [analysisKey]);
+        console.log(`Retrieved ${results.length} PR lifecycle records`);
+        
+        // Log the first few results for debugging
+        if (results.length > 0 && results.length < 10) {
+            console.log("PR lifecycle data:", JSON.stringify(results, null, 2));
+        } else if (results.length > 0) {
+            console.log("PR lifecycle sample data:", JSON.stringify(results.slice(0, 3), null, 2));
+        }
+        
+        return results;
+    } catch (error) {
+        console.error("Error in PR lifecycle query:", error);
+        // Return empty results if query fails
+        return [];
+    }
 }
 
 // Get average time to merge PRs
 async function getAverageTimeToMerge(analysisKey) {
     console.log(`Getting average time to merge for analysis key: ${analysisKey}`);
+    
+    // Use date_diff function instead of julian day calculations for better compatibility
     const query = `
     WITH monthly_stats AS (
         SELECT 
             strftime('%Y-%m', merged_timestamp) as month,
-            AVG(JULIAN(merged_timestamp) - JULIAN(created_timestamp)) * 24 as avg_hours,
+            AVG(DATE_DIFF('hour', created_timestamp, merged_timestamp)) as avg_hours,
             COUNT(*) as pr_count
         FROM branches
         WHERE analysis_key = ?
@@ -732,6 +849,7 @@ async function getAverageTimeToMerge(analysisKey) {
     `;
     
     try {
+        console.log("Using DATE_DIFF function for monthly time to merge calculations");
         return await db.getQuery(query, [analysisKey]);
     } catch (error) {
         console.error("Error getting average time to merge:", error);
@@ -742,11 +860,13 @@ async function getAverageTimeToMerge(analysisKey) {
 // Get per-contributor time to merge stats
 async function getTimeToMergeByContributor(analysisKey) {
     console.log(`Getting time to merge by contributor for analysis key: ${analysisKey}`);
+    
+    // Use date_diff function instead of julian day calculations
     const query = `
     WITH contributor_stats AS (
         SELECT 
             created_by as author,
-            AVG(JULIAN(merged_timestamp) - JULIAN(created_timestamp)) * 24 as avg_hours,
+            AVG(DATE_DIFF('hour', created_timestamp, merged_timestamp)) as avg_hours,
             COUNT(*) as pr_count
         FROM branches
         WHERE analysis_key = ?
@@ -754,7 +874,7 @@ async function getTimeToMergeByContributor(analysisKey) {
         GROUP BY created_by
     ),
     team_avg AS (
-        SELECT AVG(JULIAN(merged_timestamp) - JULIAN(created_timestamp)) * 24 as team_avg_hours
+        SELECT AVG(DATE_DIFF('hour', created_timestamp, merged_timestamp)) as team_avg_hours
         FROM branches
         WHERE analysis_key = ?
           AND merged_timestamp IS NOT NULL
@@ -766,11 +886,12 @@ async function getTimeToMergeByContributor(analysisKey) {
         CAST(ta.team_avg_hours AS FLOAT) as team_avg_hours,
         CAST((cs.avg_hours - ta.team_avg_hours) AS FLOAT) as difference
     FROM contributor_stats cs, team_avg ta
-    WHERE cs.pr_count >= 2
+    WHERE cs.pr_count >= 1  -- Changed from 2 to 1 to include more contributors
     ORDER BY cs.avg_hours
     `;
     
     try {
+        console.log("Using DATE_DIFF function for contributor time to merge calculations");
         return await db.getQuery(query, [analysisKey, analysisKey]);
     } catch (error) {
         console.error("Error getting time to merge by contributor:", error);
@@ -814,46 +935,136 @@ async function getCommitTypesByAuthor(analysisKey) {
 // Get list of previous analyses
 async function getPreviousAnalyses() {
     console.log("Getting previous analyses list");
-    const query = `
-    SELECT 
-        analysis_key,
-        label,
-        local_path,
-        years,
-        created_at,
-        since_date
-    FROM analyses
-    ORDER BY created_at DESC
-    `;
     
     try {
+        // First, get the table schema to see what columns actually exist
+        const schemaQuery = `PRAGMA table_info(analyses);`;
+        const schemaInfo = await db.getQuery(schemaQuery);
+        console.log("Analysis table schema for listing:", schemaInfo.map(col => col.name).join(", "));
+
+        // Build a query dynamically based on existing columns
+        const columns = schemaInfo.map(col => col.name);
+        const hasStartDate = columns.includes('start_date');
+        const hasEndDate = columns.includes('end_date');
+        const hasSinceDate = columns.includes('since_date');
+        const hasYears = columns.includes('years');
+        
+        // Construct query based on available columns
+        const query = `
+        SELECT 
+            analysis_key,
+            label,
+            local_path,
+            ${hasStartDate ? 'start_date,' : ''}
+            ${hasSinceDate ? 'since_date,' : ''}
+            ${hasEndDate ? 'end_date,' : ''}
+            ${hasYears ? 'years,' : ''}
+            created_at
+        FROM analyses
+        ORDER BY created_at DESC
+        `;
+        
+        console.log("Using dynamic query for listing analyses:", query);
         return await db.getQuery(query);
     } catch (error) {
         console.error("Error getting previous analyses:", error);
-        return [];
+        
+        // Fall back to a simpler query
+        try {
+            const fallbackQuery = `SELECT * FROM analyses ORDER BY created_at DESC`;
+            console.log("Trying fallback query for analyses:", fallbackQuery);
+            return await db.getQuery(fallbackQuery);
+        } catch (fallbackError) {
+            console.error("Fallback query for analyses also failed:", fallbackError);
+            return [];
+        }
     }
 }
 
 // Get analysis by key
 async function getAnalysisByKey(analysisKey) {
     console.log(`Getting analysis details for key: ${analysisKey}`);
-    const query = `
-    SELECT 
-        analysis_key,
-        label,
-        local_path,
-        years,
-        created_at,
-        since_date
-    FROM analyses
-    WHERE analysis_key = ?
-    `;
     
     try {
+        // Use a simple query to get analysis data - avoid schema complications
+        // DuckDB seems to be more strict about column names than SQLite
+        const query = `
+        SELECT * 
+        FROM analyses
+        WHERE analysis_key = ?
+        `;
+        
+        console.log("Using simple query for analysis lookup:", query);
+        
         const results = await db.getQuery(query, [analysisKey]);
-        return results.length > 0 ? results[0] : null;
+        if (results.length === 0) {
+            console.error(`No results found for analysis key: ${analysisKey}`);
+            
+            // Try to debug by listing all analyses (limit to 20)
+            const allAnalyses = await db.getQuery("SELECT analysis_key FROM analyses LIMIT 20");
+            console.log(`Sample analysis keys in database: ${allAnalyses.map(a => a.analysis_key).join(', ')}`);
+            
+            return null;
+        }
+        
+        const result = results[0];
+        console.log(`Found analysis with fields: ${Object.keys(result).join(', ')}`);
+        
+        // Handle legacy fields
+        if (!result.start_date && result.since_date) {
+            result.start_date = result.since_date;
+        }
+        
+        if (!result.end_date && result.years) {
+            // Calculate an approximate end date (since_date + years)
+            const startDate = new Date(result.start_date || result.since_date);
+            const yearsToAdd = parseFloat(result.years) || 0;
+            const endDate = new Date(startDate);
+            endDate.setFullYear(endDate.getFullYear() + Math.floor(yearsToAdd));
+            endDate.setMonth(endDate.getMonth() + Math.floor((yearsToAdd % 1) * 12));
+            
+            result.end_date = endDate.toISOString().slice(0, 10);
+        }
+        
+        return results[0];
     } catch (error) {
         console.error(`Error getting analysis details for ${analysisKey}:`, error);
+        
+        // Fall back to a simpler query if the previous one failed
+        try {
+            const fallbackQuery = `
+            SELECT *
+            FROM analyses
+            WHERE analysis_key = ?
+            `;
+            console.log("Trying fallback query:", fallbackQuery);
+            
+            const fallbackResults = await db.getQuery(fallbackQuery, [analysisKey]);
+            if (fallbackResults.length > 0) {
+                console.log("Fallback query succeeded with columns:", Object.keys(fallbackResults[0]).join(", "));
+                
+                // Normalize the result to have expected fields
+                const result = fallbackResults[0];
+                if (!result.start_date && result.since_date) {
+                    result.start_date = result.since_date;
+                }
+                if (!result.end_date && result.years) {
+                    // Calculate an approximate end date
+                    const sinceDate = new Date(result.since_date || result.start_date);
+                    const yearsToAdd = parseFloat(result.years) || 0;
+                    const endDate = new Date(sinceDate);
+                    endDate.setFullYear(endDate.getFullYear() + Math.floor(yearsToAdd));
+                    endDate.setMonth(endDate.getMonth() + Math.floor((yearsToAdd % 1) * 12));
+                    
+                    result.end_date = endDate.toISOString().slice(0, 10);
+                }
+                
+                return result;
+            }
+        } catch (fallbackError) {
+            console.error("Fallback query also failed:", fallbackError);
+        }
+        
         return null;
     }
 }

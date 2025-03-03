@@ -55,6 +55,20 @@
         button:hover {
             background-color: #45a049;
         }
+        .quick-range-btn {
+            background-color: #f1f1f1;
+            color: #333;
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .quick-range-btn.active {
+            background-color: #2196F3;
+            color: white;
+            border-color: #0b7dda;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -96,13 +110,109 @@
                 <input type="text" id="localPath" name="localPath" required placeholder="/path/to/repo or directory with repos">
             </div>
             
-            <div>
-                <label for="years">Analysis Period (Years):</label>
-                <input type="number" id="years" name="years" value="1" min="0.25" max="10" step="0.25">
+            <div style="grid-column: 1 / 3;">
+                <label>Time Range:</label>
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label for="startDate" style="display: inline-block; margin-bottom: 5px;">Start Date:</label>
+                        <input type="date" id="startDate" name="startDate" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="endDate" style="display: inline-block; margin-bottom: 5px;">End Date:</label>
+                        <input type="date" id="endDate" name="endDate">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button type="button" class="quick-range-btn" data-period="1m">1 Month</button>
+                    <button type="button" class="quick-range-btn" data-period="3m">Last Quarter</button>
+                    <button type="button" class="quick-range-btn" data-period="6m">6 Months</button>
+                    <button type="button" class="quick-range-btn" data-period="1y">1 Year</button>
+                    <button type="button" class="quick-range-btn" data-period="all">All Time</button>
+                    <button type="button" class="quick-range-btn custom" data-period="custom">Custom</button>
+                </div>
             </div>
             
-            <button type="submit">Run Analysis</button>
+            <button type="submit" style="grid-column: 1 / 3;">Run Analysis</button>
         </form>
+        
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                // Set default start date to 3 months ago
+                const now = new Date();
+                const threeMonthsAgo = new Date();
+                threeMonthsAgo.setMonth(now.getMonth() - 3);
+                
+                document.getElementById('startDate').valueAsDate = threeMonthsAgo;
+                
+                // Store the original dates from inputs
+                let userStartDate = null;
+                let userEndDate = null;
+                
+                // Setup date input event listeners to store custom dates
+                document.getElementById('startDate').addEventListener('change', function() {
+                    userStartDate = this.valueAsDate;
+                    document.querySelector('.quick-range-btn.custom').classList.add('active');
+                    document.querySelectorAll('.quick-range-btn:not(.custom)').forEach(b => b.classList.remove('active'));
+                });
+                
+                document.getElementById('endDate').addEventListener('change', function() {
+                    userEndDate = this.valueAsDate;
+                    document.querySelector('.quick-range-btn.custom').classList.add('active');
+                    document.querySelectorAll('.quick-range-btn:not(.custom)').forEach(b => b.classList.remove('active'));
+                });
+                
+                // Quick range buttons functionality
+                document.querySelectorAll('.quick-range-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const period = btn.getAttribute('data-period');
+                        
+                        if (period === 'custom' && userStartDate) {
+                            // Use the user's custom dates
+                            document.getElementById('startDate').valueAsDate = userStartDate;
+                            if (userEndDate) {
+                                document.getElementById('endDate').valueAsDate = userEndDate;
+                            }
+                        } else {
+                            // Use predefined date ranges
+                            const endDate = new Date();
+                            let startDate = new Date();
+                            
+                            switch(period) {
+                                case '1m':
+                                    startDate.setMonth(endDate.getMonth() - 1);
+                                    break;
+                                case '3m':
+                                    startDate.setMonth(endDate.getMonth() - 3);
+                                    break;
+                                case '6m':
+                                    startDate.setMonth(endDate.getMonth() - 6);
+                                    break;
+                                case '1y':
+                                    startDate.setFullYear(endDate.getFullYear() - 1);
+                                    break;
+                                case 'all':
+                                    startDate = new Date(2000, 0, 1); // Far back in time
+                                    break;
+                                default:
+                                    return; // Skip for unknown periods
+                            }
+                            
+                            document.getElementById('startDate').valueAsDate = startDate;
+                            document.getElementById('endDate').valueAsDate = endDate;
+                        }
+                        
+                        // Highlight the active button
+                        document.querySelectorAll('.quick-range-btn').forEach(b => 
+                            b.classList.remove('active'));
+                        btn.classList.add('active');
+                    });
+                });
+                
+                // Trigger the "Last Quarter" button by default
+                document.querySelector('.quick-range-btn[data-period="3m"]').click();
+            });
+        </script>
     </div>
     
     <div class="card">
@@ -122,7 +232,7 @@
                         <tr>
                             <td><%= analysis.label %></td>
                             <td><%= new Date(analysis.created_at).toLocaleString() %></td>
-                            <td><%= analysis.since_date %> to present</td>
+                            <td><%= analysis.start_date %> to <%= analysis.end_date || 'present' %></td>
                             <td>
                                 <a href="/results/<%= analysis.analysis_key %>" class="view-link">View Results</a>
                             </td>

@@ -396,20 +396,57 @@ router.get('/contributor/:author', async (req, res) => {
 });
 // Endpoint to trigger analysis
 router.post('/analyze', async (req, res) => {
-    const { localPath, years, label } = req.body;
+    const { localPath, startDate, endDate, label } = req.body;
     try {
         if (!label) {
             return res.status(400).send('Team/Group label is required');
         }
         
-        // Run analysis with the label parameter
-        const analysis = await service.analyzeAllRepositories(localPath, years || 1, label);
+        if (!startDate) {
+            return res.status(400).send('Start date is required');
+        }
+        
+        console.log(`Starting analysis with: path=${localPath}, startDate=${startDate}, endDate=${endDate}, label=${label}`);
+        
+        // Verify the path exists before running analysis
+        const fs = require('fs');
+        const path = require('path');
+        const resolvedPath = path.resolve(localPath);
+        
+        if (!fs.existsSync(resolvedPath)) {
+            console.error(`Path does not exist: ${resolvedPath}`);
+            return res.status(400).send(`
+                <h1>Invalid Path</h1>
+                <p>The path "${localPath}" (resolved to "${resolvedPath}") does not exist or is not accessible.</p>
+                <p>Please check that the path exists and you have permission to access it.</p>
+                <p><a href="/">Return to the dashboard</a> to try again.</p>
+            `);
+        }
+        
+        console.log(`Verified path exists: ${resolvedPath}`);
+        
+        // Run analysis with the date range parameters
+        const analysis = await service.analyzeAllRepositories(resolvedPath, startDate, endDate, label);
+        
+        // Log the analysis key for debugging
+        console.log(`Analysis completed successfully. Analysis key: ${analysis.analysisKey}`);
         
         // Redirect to the results page
         res.redirect(`/results/${analysis.analysisKey}`);
     } catch (error) {
         console.error('Error during analysis:', error);
-        res.status(500).send('Error performing analysis: ' + error.toString());
+        res.status(500).send(`
+            <h1>Analysis Error</h1>
+            <p>An error occurred while analyzing the repository:</p>
+            <pre style="background-color: #f8f8f8; padding: 10px; border-radius: 5px; overflow-x: auto;">${error.toString()}</pre>
+            <p>Please check:</p>
+            <ul>
+                <li>The path points to a valid Git repository or a directory containing Git repositories</li>
+                <li>You have permission to access the repository</li>
+                <li>Git is installed and accessible from the command line</li>
+            </ul>
+            <p><a href="/">Return to the dashboard</a> to try again.</p>
+        `);
     }
 });
 // Healthcheck endpoint
